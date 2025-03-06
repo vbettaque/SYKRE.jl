@@ -78,20 +78,18 @@ function logZ_saddlepoint(L, β, M, q, N, J; max_iters=10000)
     return -N * action(Σ, G, β, M, q, J)
 end
 
-function purity_saddlepoint(L, β, q, N, J; max_iters=10000)
+function renyi2_saddlepoint(L, β, q, N, J; max_iters=10000)
     Σ, G = schwinger_dyson(L, β, 2, q, J, sre=true, max_iters=max_iters)
-    return N * action(Σ, G, β, 2, q, J, sre=true) + 2 * logZ_saddlepoint(L, β, 1, q, N, J; max_iters=10000)
+    return N * log(2, ℯ) * action(Σ, G, β, 2, q, J, sre=true)
 end
 
  # Add loop corrections?
 function sre_saddlepoint(L, β, α, q, N, J; max_iters=10000)
     M = 2 * α
     Σ, G = schwinger_dyson(L, β, M, q, J, sre=true, max_iters=max_iters)
-    logZ = logZ_saddlepoint(L, β, 1, q, N, J; max_iters=max_iters)
-    # purity = purity_saddlepoint(L, β, q, N, J; max_iters=max_iters)
-    # println("purity = ", purity)
-    return (-N * action(Σ, G, β, M, q, J, sre=true)) / (1 - α) - logZ
+    sre = -N * log(2, ℯ) * action(Σ, G, β, M, q, J, sre=true)
+    renyi2 = renyi2_saddlepoint(L, β, q, N, J; max_iters=max_iters)
+    return (sre + α * renyi2 - 0.5) / (1 - α)
 end
-
 
 end

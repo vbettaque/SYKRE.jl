@@ -10,7 +10,7 @@ function matrix_sres(L, βs, α, q, N, J; max_iters=10000)
     steps = length(βs)
     sres = zeros(steps)
     # L, β, α. q, N, J
-    for i=1:steps
+    Threads.@threads for i=1:steps
         println(i, " of ", steps)
         sres[i] = MatrixSD.sre_saddlepoint(L, βs[i], α, q, N, J, max_iters=max_iters)
         println(sres[i])
@@ -24,7 +24,7 @@ J = 1
 α = 2
 L = 1000
 T_min = 0.1
-T_max = 1
+T_max = 5
 steps = 100
 N = 1
 
