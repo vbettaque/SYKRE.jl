@@ -6,36 +6,33 @@ using CSV, DataFrames
 include("MatrixSD.jl")
 
 
-function matrix_sre(q, J, α, N, L, β_min, β_max, steps; max_iters=10000)
-    βs = LinRange(β_min, β_max, steps)
+function matrix_sres(L, βs, α, q, N, J; max_iters=10000)
+    steps = length(βs)
     sres = zeros(steps)
-
+    # L, β, α. q, N, J
     for i=1:steps
         println(i, " of ", steps)
-        Σ, G = MatrixSD.sre_schwinger_dyson(q, J, βs[i], α, L; max_iters)
-        # display(Σ)
-        # display(G)
-        sres[i] = MatrixSD.sre_saddlepoint(Σ, G, βs[i], N, q, J, α)
+        sres[i] = MatrixSD.sre_saddlepoint(L, βs[i], α, q, N, J, max_iters=max_iters)
         println(sres[i])
     end
 
-    return βs, sres
+    return sres
 end
 
 q = 4
 J = 1
 α = 2
 L = 1000
-β_min = 0.01
-β_max = 1
+T_min = 0.1
+T_max = 1
 steps = 100
-N = 1000
+N = 1
 
+Ts = collect(LinRange(T_min, T_max, steps))
+βs = map(t -> 1/t, Ts)
+sres = matrix_sres(L, βs, α, q, N, J)
 
-βs, sres = matrix_sre(q, J, α, N, L, β_min, β_max, steps)
-
-
-df = DataFrame(β = βs, sre = sres)
+df = DataFrame(T = Ts, β = βs, sre = sres)
 CSV.write("./data/test.csv", df)
 
 
