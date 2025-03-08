@@ -13,7 +13,7 @@ function matrix_sres(L, βs, α, q, N, J; max_iters=10000)
     Threads.@threads for i=1:steps
         println(i, " of ", steps)
         sres[i] = MatrixSD.sre_saddlepoint(L, βs[i], α, q, N, J, max_iters=max_iters)
-        println(sres[i])
+        println("(T, SRE) = (", 1/βs[i], ", ", sres[i], ")")
     end
 
     return sres
@@ -22,10 +22,10 @@ end
 q = 4
 J = 1
 α = 2
-L = 1000
-T_min = 0.1
-T_max = 5
-steps = 100
+L = 100
+T_min = 1
+T_max = 2
+steps = 10000
 N = 1
 
 Ts = collect(LinRange(T_min, T_max, steps))
@@ -34,6 +34,11 @@ sres = matrix_sres(L, βs, α, q, N, J)
 
 df = DataFrame(T = Ts, β = βs, sre = sres)
 CSV.write("./data/test.csv", df)
+
+
+using Plots
+data = CSV.read("./data/test.csv", DataFrame)
+plot(data[!, 1], data[!, 3])
 
 
 

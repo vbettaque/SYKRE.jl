@@ -75,12 +75,12 @@ end
  # Add loop corrections?
 function logZ_saddlepoint(L, β, M, q, N, J; max_iters=10000)
     Σ, G = schwinger_dyson(L, β, M, q, J, max_iters=max_iters)
-    return -N * action(Σ, G, β, M, q, J)
+    return -N * log(2, ℯ) * action(Σ, G, β, M, q, J)
 end
 
 function renyi2_saddlepoint(L, β, q, N, J; max_iters=10000)
     Σ, G = schwinger_dyson(L, β, 2, q, J, sre=true, max_iters=max_iters)
-    return N * log(2, ℯ) * action(Σ, G, β, 2, q, J, sre=true)
+    return -N * log(2, ℯ) * action(Σ, G, β, 2, q, J, sre=true)
 end
 
  # Add loop corrections?
@@ -88,8 +88,10 @@ function sre_saddlepoint(L, β, α, q, N, J; max_iters=10000)
     M = 2 * α
     Σ, G = schwinger_dyson(L, β, M, q, J, sre=true, max_iters=max_iters)
     sre = -N * log(2, ℯ) * action(Σ, G, β, M, q, J, sre=true)
+    # println("sre = ", sre)
     renyi2 = renyi2_saddlepoint(L, β, q, N, J; max_iters=max_iters)
-    return (sre + α * renyi2 - 0.5) / (1 - α)
+    # println("renyi = ", renyi2)
+    return (sre - renyi2) / (1 - α) + 2 * logZ_saddlepoint(L, β, 1, q, N, J; max_iters=10000)
 end
 
 end
