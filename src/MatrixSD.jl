@@ -55,9 +55,9 @@ function action(Σ::SkewHermitian, G::SkewHermitian, β, M, q, J; sre=false)
     return prop_term + greens_term + lagrange_term
 end
 
-function schwinger_dyson(L, β, M, q, J; sre=false, max_iters=10000)
+function schwinger_dyson(L, β, M, q, J; Σ_init = SkewHermitian(zeros(L, L)), sre=false, max_iters=10000)
 	x = 0.5; b = 2; err=0
-	Σ = SkewHermitian(zeros(L, L))
+	Σ = Σ_init
 	G = G_eom(Σ, β, M, sre=sre)
 	for i=1:max_iters
 		Σ = Σ_eom(G, q, J)
@@ -72,26 +72,53 @@ function schwinger_dyson(L, β, M, q, J; sre=false, max_iters=10000)
 	return Σ, G
 end
 
- # Add loop corrections?
-function logZ_saddlepoint(L, β, M, q, N, J; max_iters=10000)
-    Σ, G = schwinger_dyson(L, β, M, q, J, max_iters=max_iters)
-    return -N * log(2, ℯ) * action(Σ, G, β, M, q, J)
-end
 
-function renyi2_saddlepoint(L, β, q, N, J; max_iters=10000)
-    Σ, G = schwinger_dyson(L, β, 2, q, J, sre=true, max_iters=max_iters)
-    return -N * log(2, ℯ) * action(Σ, G, β, 2, q, J, sre=true)
-end
-
- # Add loop corrections?
-function sre_saddlepoint(L, β, α, q, N, J; max_iters=10000)
+function sre_saddlepoint(L, βs, α, q, N, J; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
+    steps = length(βs)
     M = 2 * α
-    Σ, G = schwinger_dyson(L, β, M, q, J, sre=true, max_iters=max_iters)
-    sre = -N * log(2, ℯ) * action(Σ, G, β, M, q, J, sre=true)
-    # println("sre = ", sre)
-    renyi2 = renyi2_saddlepoint(L, β, q, N, J; max_iters=max_iters)
-    # println("renyi = ", renyi2)
-    return (sre - renyi2) / (1 - α) + 2 * logZ_saddlepoint(L, β, 1, q, N, J; max_iters=10000)
+    sres = zeros(steps)
+    Σ_α = Σ_init
+    Σ_2 = Σ_init
+    Σ_Z = Σ_init
+    for i=1:steps
+        println(i, " of ", steps)
+
+        Σ_α, G_α = schwinger_dyson(L, βs[i], M, q, J, Σ_init=Σ_α, sre=true, max_iters=max_iters)
+        Σ_2, G_2 = schwinger_dyson(L, βs[i], 2, q, J, Σ_init=Σ_2, sre=true, max_iters=max_iters)
+        Σ_Z, G_Z = schwinger_dyson(L, βs[i], 1, q, J, Σ_init=Σ_Z, max_iters=max_iters)
+
+        sre_α_saddle = -N * log(2, ℯ) * action(Σ_α, G_α, βs[i], M, q, J, sre=true)
+        sre_2_saddle = -N * log(2, ℯ) * action(Σ_2, G_2, βs[i], 2, q, J, sre=true)
+        logZ_saddle = -N * log(2, ℯ) * action(Σ_Z, G_Z, βs[i], 1, q, J)
+
+        sres[i] = (sre_α_saddle - sre_2_saddle) / (1 - α) + 2 * logZ_saddle
+        println("(T, SRE) = (", 1/βs[i], ", ", sres[i], ")")
+    end
+
+    return sres
 end
+
+
+#  # Add loop corrections?
+# function logZ_saddlepoint(L, β, M, q, N, J; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
+#     Σ, G = schwinger_dyson(L, β, M, q, J, Σ_init=Σ_init, max_iters=max_iters)
+#     return -N * log(2, ℯ) * action(Σ, G, β, M, q, J)
+# end
+
+# function renyi2_saddlepoint(L, β, q, N, J; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
+#     Σ, G = schwinger_dyson(L, β, 2, q, J, Σ_init=Σ_init, sre=true, max_iters=max_iters)
+#     return -N * log(2, ℯ) * action(Σ, G, β, 2, q, J, sre=true)
+# end
+
+#  # Add loop corrections?
+# function sre_saddlepoint(L, β, α, q, N, J; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
+#     M = 2 * α
+#     Σ, G = schwinger_dyson(L, β, M, q, J, Σ_init=Σ_init, sre=true, max_iters=max_iters)
+#     sre = -N * log(2, ℯ) * action(Σ, G, β, M, q, J, sre=true)
+#     # println("sre = ", sre)
+#     renyi2 = renyi2_saddlepoint(L, β, q, N, J; Σ_init=Σ_init, max_iters=max_iters)
+#     # println("renyi = ", renyi2)
+#     return (sre - renyi2) / (1 - α) + 2 * logZ_saddlepoint(L, β, 1, q, N, J; Σ_init=Σ_init, max_iters=max_iters)
+# end
 
 end
