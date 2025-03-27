@@ -6,18 +6,18 @@ using CSV, DataFrames, Statistics, SkewLinearAlgebra
 include("MatrixSD.jl")
 
 
-function matrix_sres(L, βs, α, q, N, J; max_iters=10000)
-    steps = length(βs)
-    sres = zeros(steps)
-    # L, β, α. q, N, J
-    Threads.@threads for i=1:steps
-        println(i, " of ", steps)
-        sres[i] = MatrixSD.sre_saddlepoint(L, βs[i], α, q, N, J, max_iters=max_iters)
-        println("(T, SRE) = (", 1/βs[i], ", ", sres[i], ")")
-    end
+# function matrix_sres(L, βs, α, q, N, J; max_iters=10000)
+#     steps = length(βs)
+#     sres = zeros(steps)
+#     # L, β, α. q, N, J
+#     Threads.@threads for i=1:steps
+#         println(i, " of ", steps)
+#         sres[i] = MatrixSD.sre_saddlepoint(L, βs[i], α, q, N, J, max_iters=max_iters)
+#         println("(T, SRE) = (", 1/βs[i], ", ", sres[i], ")")
+#     end
 
-    return sres
-end
+#     return sres
+# end
 
 
 function time_invariance(M, β)
@@ -39,23 +39,27 @@ function time_invariance(M, β)
     return Δτ * Δs, M_avgs, M_stds
 end
 
-q = 2
+qs = [2, 4, 6, 8]
 J = 1
 α = 2
-L = 400
-T_min = 1
-T_max = 2
+L = 500
+T_start = 0.2
+T_stop = 0.1
 steps = 100
 N = 1
-Σ_init = SkewHermitian(zeros(L, L))
 max_iters = 10000
 
-Ts = collect(LinRange(T_min, T_max, steps))
+Ts = collect(LinRange(T_start, T_stop, steps))
 βs = map(t -> 1/t, Ts)
-sres = MatrixSD.sre_saddlepoint(L, βs, α, q, N, J, Σ_init=Σ_init, max_iters=max_iters)
+Σ_init = SkewHermitian(zeros(L, L))
 
-df = DataFrame(T = Ts, β = βs, sre = sres)
-CSV.write("./data/test.csv", df)
+for i in eachindex(qs)
+    println("q = ", qs[i])
+    sres = MatrixSD.sre_saddlepoint(L, βs, α, qs[i], N, J, Σ_init=Σ_init, max_iters=max_iters)
+    df = DataFrame(T = Ts, β = βs, sre = sres)
+    file_name = string("./data/sykre_matrix_q", qs[i], ".csv")
+    CSV.write(file_name, df)
+end
 
 using Plots
 data = CSV.read("./data/test.csv", DataFrame)

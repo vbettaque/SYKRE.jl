@@ -17,11 +17,11 @@ function G_eom(Σ::SkewHermitian, β, M; sre=false)
     Δτ = β/L
 	D_minus = differential(L)
     @assert isskewsymmetric(Σ) "Not skew-symmetric!"
-    prop_minus = D_minus + Δτ^2 * Σ
+    prop_minus = D_minus - Δτ^2 * Σ
     sre || return inv(prop_minus)
 
 	D_plus = differential(L, anti_periodic=false)
-	prop_plus = D_plus + Δτ^2 * Σ
+	prop_plus = D_plus - Δτ^2 * Σ
 	pfaff_minus = pfaffian(prop_minus)^M
 	pfaff_plus = pfaffian(prop_plus)^M
 	p_minus = pfaff_minus / (pfaff_minus + pfaff_plus)
@@ -38,11 +38,11 @@ function action(Σ::SkewHermitian, G::SkewHermitian, β, M, q, J; sre=false)
     L, _ = size(Σ)
     Δτ = β/L
     D_minus = differential(L)
-    prop_minus = D_minus + Δτ^2 * Σ
+    prop_minus = D_minus - Δτ^2 * Σ
     prop_term = 0
     if sre
         D_plus = differential(L, anti_periodic=false)
-	    prop_plus = D_plus + Δτ^2 * Σ
+	    prop_plus = D_plus - Δτ^2 * Σ
         prop_term = -log(pfaffian(prop_minus)^M + pfaffian(prop_plus)^M)
     else
         prop_term = -M * log(pfaffian(prop_minus))
