@@ -1,9 +1,10 @@
 module SYKRE
 
-using CSV, DataFrames, Statistics, SkewLinearAlgebra
+using CSV, DataFrames, Statistics
 
 
 include("MatrixSD.jl")
+include("FourierSD.jl")
 
 
 # function matrix_sres(L, βs, α, q, N, J; max_iters=10000)
