@@ -62,9 +62,15 @@ for i in eachindex(qs)
     CSV.write(file_name, df)
 end
 
-using Plots
-data = CSV.read("./data/test.csv", DataFrame)
-plot(data[!, 1], data[!, 3])
+using CSV, Plots, DataFrames
+data_q2 = CSV.read("data/sykre_matrix_q2.csv", DataFrame)
+data_q4 = CSV.read("data/sykre_matrix_q4.csv", DataFrame)
+data_q6 = CSV.read("data/sykre_matrix_q6.csv", DataFrame)
+plot(data_q2[!, 1], data_q2[!, 3], label="q=2")
+plot!(data_q4[!, 1], data_q4[!, 3], label="q=4")
+plot!(data_q6[!, 1], data_q6[!, 3], label="q=6")
+xlabel!("T")
+ylabel!("M2")
 
 # L = 100
 # β = 1
