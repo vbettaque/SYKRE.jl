@@ -12,7 +12,7 @@ function differential(L; anti_periodic=true)
 	return SkewHermitian(sparse(rows, columns, float.(values)))
 end
 
-function G_eom(Σ::SkewHermitian, β, M; sre=false)
+function G_sd(Σ::SkewHermitian, β, M; sre=false)
 	L, _ = size(Σ)
     Δτ = β/L
 	D_minus = differential(L)
@@ -30,7 +30,7 @@ function G_eom(Σ::SkewHermitian, β, M; sre=false)
 	return p_minus * inv(prop_minus) + (1 - p_minus) * inv(prop_plus)
 end
 
-function Σ_eom(G::SkewHermitian, q, J)
+function Σ_sd(G::SkewHermitian, q, J)
 	return SkewHermitian(J^2 * map(g -> g^(q-1), G))
 end
 
@@ -58,10 +58,10 @@ end
 function schwinger_dyson(L, β, M, q, J; Σ_init = SkewHermitian(zeros(L, L)), sre=false, max_iters=10000)
 	x = 0.5; b = 2; err=0
 	Σ = Σ_init
-	G = G_eom(Σ, β, M, sre=sre)
+	G = G_sd(Σ, β, M, sre=sre)
 	for i=1:max_iters
-		Σ = Σ_eom(G, q, J)
-		G_new = x * G_eom(Σ, β, M, sre=sre) + (1 - x) * G
+		Σ = Σ_sd(G, q, J)
+		G_new = x * G_sd(Σ, β, M, sre=sre) + (1 - x) * G
 		err_new = sum(abs.(G_new - G)) / sum(abs.(G))
 		isapprox(err_new, 0) && break
 		err_new > err && (x /= b)
