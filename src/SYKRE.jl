@@ -2,7 +2,7 @@ module SYKRE
 
 using CSV, DataFrames, Statistics
 
-
+include("SYK.jl")
 include("MatrixSD.jl")
 include("FourierSD.jl")
 
@@ -21,54 +21,54 @@ include("FourierSD.jl")
 # end
 
 
-function time_invariance(M, β)
-    L, _ = size(M)
-    Δτ = β / L
-    Δs = collect(0:(L-1))
-    M_avgs = zeros(L)
-    M_stds = zeros(L)
-    for k=1:L
-        Δ = Δs[k]
-        Ms = zeros(L)
-        for i=1:L
-            j = (i + Δ - 1) % L + 1
-            Ms[i] = sign(j-i) * M[i, j]
-        end
-        M_avgs[k] = mean(Ms)
-        M_stds[k] = std(Ms)
-    end
-    return Δτ * Δs, M_avgs, M_stds
-end
+# function time_invariance(M, β)
+#     L, _ = size(M)
+#     Δτ = β / L
+#     Δs = collect(0:(L-1))
+#     M_avgs = zeros(L)
+#     M_stds = zeros(L)
+#     for k=1:L
+#         Δ = Δs[k]
+#         Ms = zeros(L)
+#         for i=1:L
+#             j = (i + Δ - 1) % L + 1
+#             Ms[i] = sign(j-i) * M[i, j]
+#         end
+#         M_avgs[k] = mean(Ms)
+#         M_stds[k] = std(Ms)
+#     end
+#     return Δτ * Δs, M_avgs, M_stds
+# end
 
-qs = [2, 4, 6, 8]
-J = 1
-α = 2
-L = 500
-T_start = 0.2
-T_stop = 0.1
-steps = 100
-N = 1
-max_iters = 10000
+# qs = [2, 4, 6, 8]
+# J = 1
+# α = 2
+# L = 500
+# T_start = 0.2
+# T_stop = 0.1
+# steps = 100
+# N = 1
+# max_iters = 10000
 
-Ts = collect(LinRange(T_start, T_stop, steps))
-βs = map(t -> 1/t, Ts)
-Σ_init = SkewHermitian(zeros(L, L))
+# Ts = collect(LinRange(T_start, T_stop, steps))
+# βs = map(t -> 1/t, Ts)
+# Σ_init = SkewHermitian(zeros(L, L))
 
-for i in eachindex(qs)
-    println("q = ", qs[i])
-    sres = MatrixSD.sre_saddlepoint(L, βs, α, qs[i], N, J, Σ_init=Σ_init, max_iters=max_iters)
-    df = DataFrame(T = Ts, β = βs, sre = sres)
-    file_name = string("./data/sykre_matrix_q", qs[i], ".csv")
-    CSV.write(file_name, df)
-end
+# for i in eachindex(qs)
+#     println("q = ", qs[i])
+#     sres = MatrixSD.sre_saddlepoint(L, βs, α, qs[i], N, J, Σ_init=Σ_init, max_iters=max_iters)
+#     df = DataFrame(T = Ts, β = βs, sre = sres)
+#     file_name = string("./data/sykre_matrix_q", qs[i], ".csv")
+#     CSV.write(file_name, df)
+# end
 
 using CSV, Plots, DataFrames
 data_q2 = CSV.read("data/sykre_matrix_q2.csv", DataFrame)
 data_q4 = CSV.read("data/sykre_matrix_q4.csv", DataFrame)
 data_q6 = CSV.read("data/sykre_matrix_q6.csv", DataFrame)
-plot(data_q2[!, 1], data_q2[!, 3], label="q=2")
-plot!(data_q4[!, 1], data_q4[!, 3], label="q=4")
-plot!(data_q6[!, 1], data_q6[!, 3], label="q=6")
+plot(data_q2[!, 2], data_q2[!, 3], label="q=2")
+plot!(data_q4[!, 2], data_q4[!, 3], label="q=4")
+plot!(data_q6[!, 2], data_q6[!, 3], label="q=6")
 xlabel!("T")
 ylabel!("M2")
 
@@ -88,6 +88,35 @@ ylabel!("M2")
 # xlabel!("k Δτ")
 # ylabel!("Σ(τ, τ+kΔτ)/Δτ²")
 
+using Plots
+using .SYK
+using FFTW
 
+N = 1
+β = 2.
+J = 1.
+q = 4
+M = 1
+L = 2^10
+
+syk = SYKData(N, J, q, M, β)
+
+
+Δτ = 2β / L
+τs = collect((0:L-1) * Δτ)
+
+Σ = 0.1* ones(L)
+G = FourierSD.G_SD(Σ, syk)
+
+even = iseven.(fftfreq(L, L))
+ωs = fftfreq(L, π * L / syk.β)
+G_fft = zeros(ComplexF64, L)
+G_fft[even] = 4 ./ (-im * ωs[even])
+G_fft[1] = 0
+G_ = real(fft!(G_fft)) / (2 * syk.β)
+
+p = plot(τs, real(G_))
+
+display(p)
 
 end
