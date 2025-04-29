@@ -3,7 +3,7 @@ module SYKRE
 using CSV, DataFrames, Statistics
 
 include("SYK.jl")
-include("MatrixSD.jl")
+include("SYKMatrix.jl")
 include("SYKFourier.jl")
 include("SREFourier.jl")
 
@@ -22,24 +22,24 @@ include("SREFourier.jl")
 # end
 
 
-# function time_invariance(M, β)
-#     L, _ = size(M)
-#     Δτ = β / L
-#     Δs = collect(0:(L-1))
-#     M_avgs = zeros(L)
-#     M_stds = zeros(L)
-#     for k=1:L
-#         Δ = Δs[k]
-#         Ms = zeros(L)
-#         for i=1:L
-#             j = (i + Δ - 1) % L + 1
-#             Ms[i] = sign(j-i) * M[i, j]
-#         end
-#         M_avgs[k] = mean(Ms)
-#         M_stds[k] = std(Ms)
-#     end
-#     return Δτ * Δs, M_avgs, M_stds
-# end
+function time_invariance(M, β)
+    L, _ = size(M)
+    Δτ = β / L
+    Δs = collect(0:(L-1))
+    M_avgs = zeros(L)
+    M_stds = zeros(L)
+    for k=1:L
+        Δ = Δs[k]
+        Ms = zeros(L)
+        for i=1:L
+            j = (i + Δ - 1) % L + 1
+            Ms[i] = sign(j-i) * M[i, j]
+        end
+        M_avgs[k] = mean(Ms)
+        M_stds[k] = std(Ms)
+    end
+    return Δτ * Δs, M_avgs, M_stds
+end
 
 # qs = [2, 4, 6, 8]
 # J = 1
@@ -89,31 +89,38 @@ ylabel!("M2")
 # xlabel!("k Δτ")
 # ylabel!("Σ(τ, τ+kΔτ)/Δτ²")
 
-using FFTW
+# using FFTW
 using Plots
 
 N = 1
-β = 0.01
+β = 1
 J = 1.
 q = 4
 M = 4
-L = 2^15
-
+L = 1000
 
 syk = SYK.SYKData(N, J, q, M, β)
 
-Δτ = 2β / L
-τs = collect((0:L-1) * Δτ)
+Σ, G = SYKMatrix.schwinger_dyson(L, syk)
+Σ_, G_ = SYKFourier.schwinger_dyson(2 * L, syk)
 
+τs, G_avg, _ = time_invariance(G, β)
 
-# Σ_init = (sign.(τs) + sign.(τs .- β) - 2 * τs / β .+ 1).^(q-1)
-Σ_fft = zeros(ComplexF64, L)
-Σ_fft[1] = 0.5
-Σ_init = real(fft(Σ_fft)) / (2 * syk.β)
-
-Σ, G = SREFourier.schwinger_dyson(L, syk, Σ_init=Σ_init)
-
-p = plot(τs, G)
+p = plot(τs[2:2:L], -G_avg[2:2:L])
+plot!(τs, G_[1:L])
+ylims!((-1, 1))
 display(p)
+
+# Δτ = 2β / L
+# τs = collect((0:L-1) * Δτ)
+
+
+# # Σ_init = (sign.(τs) + sign.(τs .- β) - 2 * τs / β .+ 1).^(q-1)
+# Σ_fft = zeros(ComplexF64, L)
+# Σ_fft[1] = -1
+# Σ_init = real(fft(Σ_fft)) / (2 * syk.β)
+
+# Σ, G = SREFourier.schwinger_dyson(L, syk, Σ_init=Σ_init)
+
 
 end

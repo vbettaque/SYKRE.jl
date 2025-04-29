@@ -28,7 +28,7 @@ function p_odd(Σ_freq::AbstractVector, syk::SYKData)
     α = syk.M ÷ 2
     ratio = det_ratio(Σ_freq, syk)
     # println("ratio = ", ratio)
-    return 1 / (1 + ratio^α)
+    return real(1 / (1 + ratio^α))
 end
 
 function G_SD_freq(Σ::AbstractVector, syk::SYKData)
@@ -37,7 +37,7 @@ function G_SD_freq(Σ::AbstractVector, syk::SYKData)
     odd = isodd.(fftfreq(L, L))
     ωs = fftfreq(L, π * L / syk.β)
     p = p_odd(Σ, syk)
-    # println("p = ", p)
+    println("p = ", p)
     @assert !isnan(p)
     G = zeros(ComplexF64, L)
     if isapprox(p, 1)
@@ -75,7 +75,7 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L), max_iters=10000)
 		err_new = sum(abs.(G_freq_new - G_freq)) / sum(abs.(G_freq))
 		isapprox(err_new, 0) && break
 		err_new > err && (t /= b)
-        display(err_new)
+        # display(err_new)
 		err = err_new
 		G_freq = G_freq_new
         G_real = real(FFT * G_freq) / (2 * syk.β)
