@@ -9,5 +9,5 @@ struct SYKData
     M::Int
     β::Float64
 end
-    
+
 end

@@ -4,7 +4,8 @@ using CSV, DataFrames, Statistics
 
 include("SYK.jl")
 include("MatrixSD.jl")
-include("FourierSD.jl")
+include("SYKFourier.jl")
+include("SREFourier.jl")
 
 
 # function matrix_sres(L, βs, α, q, N, J; max_iters=10000)
@@ -88,35 +89,31 @@ ylabel!("M2")
 # xlabel!("k Δτ")
 # ylabel!("Σ(τ, τ+kΔτ)/Δτ²")
 
-using Plots
-using .SYK
 using FFTW
+using Plots
 
 N = 1
-β = 2.
+β = 0.01
 J = 1.
 q = 4
-M = 1
-L = 2^10
+M = 4
+L = 2^15
 
-syk = SYKData(N, J, q, M, β)
 
+syk = SYK.SYKData(N, J, q, M, β)
 
 Δτ = 2β / L
 τs = collect((0:L-1) * Δτ)
 
-Σ = 0.1* ones(L)
-G = FourierSD.G_SD(Σ, syk)
 
-even = iseven.(fftfreq(L, L))
-ωs = fftfreq(L, π * L / syk.β)
-G_fft = zeros(ComplexF64, L)
-G_fft[even] = 4 ./ (-im * ωs[even])
-G_fft[1] = 0
-G_ = real(fft!(G_fft)) / (2 * syk.β)
+# Σ_init = (sign.(τs) + sign.(τs .- β) - 2 * τs / β .+ 1).^(q-1)
+Σ_fft = zeros(ComplexF64, L)
+Σ_fft[1] = 0.5
+Σ_init = real(fft(Σ_fft)) / (2 * syk.β)
 
-p = plot(τs, real(G_))
+Σ, G = SREFourier.schwinger_dyson(L, syk, Σ_init=Σ_init)
 
+p = plot(τs, G)
 display(p)
 
 end
