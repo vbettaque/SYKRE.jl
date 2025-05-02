@@ -18,7 +18,6 @@ function G_SD(Σ::SkewHermitian, syk::SYKData)
 	L, _ = size(Σ)
     Δτ = syk.β/L
 	D = differential(L)
-    @assert isskewsymmetric(Σ) "Not skew-symmetric!"
     prop = D - Δτ^2 * Σ
     return inv(prop)
 end

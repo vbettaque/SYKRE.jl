@@ -4,6 +4,7 @@ using CSV, DataFrames, Statistics
 
 include("SYK.jl")
 include("SYKMatrix.jl")
+include("SREMatrix.jl")
 include("SYKFourier.jl")
 include("SREFourier.jl")
 
@@ -63,15 +64,15 @@ end
 #     CSV.write(file_name, df)
 # end
 
-using CSV, Plots, DataFrames
-data_q2 = CSV.read("data/sykre_matrix_q2.csv", DataFrame)
-data_q4 = CSV.read("data/sykre_matrix_q4.csv", DataFrame)
-data_q6 = CSV.read("data/sykre_matrix_q6.csv", DataFrame)
-plot(data_q2[!, 2], data_q2[!, 3], label="q=2")
-plot!(data_q4[!, 2], data_q4[!, 3], label="q=4")
-plot!(data_q6[!, 2], data_q6[!, 3], label="q=6")
-xlabel!("T")
-ylabel!("M2")
+# using CSV, Plots, DataFrames
+# data_q2 = CSV.read("data/sykre_matrix_q2.csv", DataFrame)
+# data_q4 = CSV.read("data/sykre_matrix_q4.csv", DataFrame)
+# data_q6 = CSV.read("data/sykre_matrix_q6.csv", DataFrame)
+# plot(data_q2[!, 2], data_q2[!, 3], label="q=2")
+# plot!(data_q4[!, 2], data_q4[!, 3], label="q=4")
+# plot!(data_q6[!, 2], data_q6[!, 3], label="q=6")
+# xlabel!("T")
+# ylabel!("M2")
 
 # L = 100
 # β = 1
@@ -90,26 +91,54 @@ ylabel!("M2")
 # ylabel!("Σ(τ, τ+kΔτ)/Δτ²")
 
 # using FFTW
-using Plots
+# using Plots
 
-N = 1
-β = 1
-J = 1.
-q = 4
-M = 4
-L = 1000
+# N = 1
+# β = 1
+# J = 1.
+# q = 4
+# M = 4
+# L = 1000
 
-syk = SYK.SYKData(N, J, q, M, β)
+# syk = SYK.SYKData(N, J, q, M, β)
 
-Σ, G = SYKMatrix.schwinger_dyson(L, syk)
-Σ_, G_ = SYKFourier.schwinger_dyson(2 * L, syk)
+# Σ, G = SYKMatrix.schwinger_dyson(L, syk)
+# Σ_, G_ = SYKFourier.schwinger_dyson(2 * L, syk)
 
-τs, G_avg, _ = time_invariance(G, β)
+# τs, G_avg, _ = time_invariance(G, β)
 
-p = plot(τs[2:2:L], -G_avg[2:2:L])
-plot!(τs, G_[1:L])
-ylims!((-1, 1))
-display(p)
+# p = plot(τs[2:2:L], -G_avg[2:2:L])
+# plot!(τs, G_[1:L])
+# ylims!((-1, 1))
+# display(p)
+
+
+# L = 8
+# using LinearAlgebra
+# using SkewLinearAlgebra
+
+
+# D_minus = SREMatrix.differential(L; anti_periodic=true)
+# D_plus = SREMatrix.differential(L; anti_periodic=false)
+
+# eta = D_minus - D_plus
+
+# Σ = skewhermitian(rand(Float64, L, L))
+# pfaffian(Σ)
+# Σ
+# replica_I = Matrix{Float64}(I, 2, 2)
+
+# replica_corrs = [1 0.5; 0.5 1]
+
+# D_plus_replica = kron(replica_I, D_plus)
+# Σ_replica = kron(replica_corrs, Σ)
+
+# pfaffian(D_plus_replica - Σ_replica)
+# pfaffian(Σ_replica)
+
+# pfaffian(D_plus - Σ)
+
+# display(D)
 
 # Δτ = 2β / L
 # τs = collect((0:L-1) * Δτ)
@@ -120,7 +149,36 @@ display(p)
 # Σ_fft[1] = -1
 # Σ_init = real(fft(Σ_fft)) / (2 * syk.β)
 
-# Σ, G = SREFourier.schwinger_dyson(L, syk, Σ_init=Σ_init)
+using LinearAlgebra
+using SkewLinearAlgebra
 
+N = 1
+β = 1
+J = 1.
+q = 4
+M = 4
+L = 4
+
+D_minus = SREMatrix.differential(L; anti_periodic=true)
+D_plus = SREMatrix.differential(L; anti_periodic=false)
+
+replica_I = Matrix{Float64}(I, 2, 2)
+
+replica_corrs = [1 0.5; 0.5 1]
+
+syk = SYK.SYKData(N, J, q, M, β)
+
+Σ, G = SREMatrix.schwinger_dyson(L, syk)
+
+Δτ = syk.β/L
+
+kron(replica_corrs, Σ)
+
+Σ
+pfaffian(Σ)
+pfaffian(D_plus - Δτ^2 * Σ)
+pfaffian(kron(replica_I, D_plus) - Δτ^2 * kron(replica_corrs, Σ))
+
+isapprox(1.266534603536663e-66, 0; atol=1e-50)
 
 end
