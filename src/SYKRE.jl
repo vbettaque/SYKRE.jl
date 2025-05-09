@@ -153,11 +153,11 @@ using LinearAlgebra
 using SkewLinearAlgebra
 
 N = 1
-β = 1
+β = 2
 J = 1.
 q = 4
 M = 4
-L = 4
+L = 6
 
 D_minus = SREMatrix.differential(L; anti_periodic=true)
 D_plus = SREMatrix.differential(L; anti_periodic=false)
@@ -168,17 +168,39 @@ replica_corrs = [1 0.5; 0.5 1]
 
 syk = SYK.SYKData(N, J, q, M, β)
 
-Σ, G = SREMatrix.schwinger_dyson(L, syk)
-
 Δτ = syk.β/L
+Σ_init = (Δτ)^2 * SkewHermitian(syk.J^2 * map(g -> g^(syk.q-1), inv(D_minus)))
 
-kron(replica_corrs, Σ)
+Σ, G = SREMatrix.schwinger_dyson(L, syk; Σ_init = Σ_init)
 
 Σ
 pfaffian(Σ)
-pfaffian(D_plus - Δτ^2 * Σ)
+pfaffian(D_plus - Σ_init)
+pfaffian(D_minus - Σ_init)
 pfaffian(kron(replica_I, D_plus) - Δτ^2 * kron(replica_corrs, Σ))
 
-isapprox(1.266534603536663e-66, 0; atol=1e-50)
+using Plots
+τs, G_avg, _ = time_invariance(G, syk.β)
 
+p = plot(τs[2:2:L], -G_avg[2:2:L])
+ylims!(0, 0.5)
+display(p)
+
+D_rep = kron(replica_I, D_minus)
+
+inv(D_rep)
+
+(D_minus - D_plus)/2
+
+D_minus
+D_plus
+
+
+
+L = 200
+D_minus = SREMatrix.differential(L; anti_periodic=true)
+D_plus = SREMatrix.differential(L; anti_periodic=false)
+eta = D_plus - D_minus
+pfaffian(D_plus - eta)
+pfaffian(D_minus - eta)
 end

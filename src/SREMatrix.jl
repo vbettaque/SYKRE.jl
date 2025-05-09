@@ -11,7 +11,7 @@ function differential(L; anti_periodic=true)
 	values = repeat([-1, 1], L)
 	columns = rows + values; columns[1] = L; columns[2*L] = 1
 	anti_periodic && (values[1] *= -1; values[2*L] *= -1)
-	return SkewHermitian(Matrix(sparse(rows, columns, float.(values)))) # Add / 2 back
+	return SkewHermitian(Matrix(sparse(rows, columns, float.(values))))
 end
 
 function G_SD(Σ::SkewHermitian, syk::SYKData)
@@ -24,12 +24,12 @@ function G_SD(Σ::SkewHermitian, syk::SYKData)
 	prop_plus = D_plus - Δτ^2 * Σ
 	pfaff_minus = pfaffian(prop_minus)^syk.M
 	pfaff_plus = pfaffian(prop_plus)^syk.M
-    println("pfaff_plus = ", pfaff_plus)
-    println("pfaff_minus = ", pfaff_minus)
+    # println("pfaff_plus = ", pfaff_plus)
+    # println("pfaff_minus = ", pfaff_minus)
 	p_plus = pfaff_plus / (pfaff_minus + pfaff_plus)
-    println("p_plus = ", p_plus)
-    isapprox(p_plus, 0; atol=1e-50) && return inv(prop_minus)
-    isapprox(p_plus, 1; atol=1e-50) && return inv(prop_plus)
+    # println("p_plus = ", p_plus)
+    # isapprox(p_plus, 0; atol=1e-50) && return inv(prop_minus)
+    # isapprox(p_plus, 1; atol=1e-50) && return inv(prop_plus)
 	return (1 - p_plus) * inv(prop_minus) + p_plus * inv(prop_plus)
 end
 

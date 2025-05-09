@@ -11,7 +11,7 @@ function differential(L)
 	values = repeat([-1, 1], L)
 	columns = rows + values; columns[1] = L; columns[2*L] = 1
 	values[1] *= -1; values[2*L] *= -1
-	return SkewHermitian(Matrix(sparse(rows, columns, float.(values)) / 2))
+	return SkewHermitian(Matrix(sparse(rows, columns, float.(values))))
 end
 
 function G_SD(Σ::SkewHermitian, syk::SYKData)
@@ -24,6 +24,23 @@ end
 
 function Σ_SD(G::SkewHermitian, syk::SYKData)
 	return SkewHermitian(syk.J^2 * map(g -> g^(syk.q-1), G))
+end
+
+function schwinger_dyson(L, syk::SYKData; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
+	t = 0.5; b = 2; err=0
+	Σ = Σ_init
+	G = G_SD(Σ, syk)
+	for i=1:max_iters
+		Σ = Σ_SD(G, syk)
+		G_new = t * G_SD(Σ, syk) + (1 - t) * G
+		err_new = sum(abs.(G_new - G)) / sum(abs.(G))
+		isapprox(err_new, 0) && break
+		err_new > err && (t /= b)
+		err = err_new
+		G = G_new
+        i == max_iters && println("Exceeded iterations!")
+	end
+	return Σ, G
 end
 
 # function action(Σ::SkewHermitian, G::SkewHermitian, β, M, q, J; sre=false)
@@ -46,23 +63,6 @@ end
 #     # println("lagrange = ", lagrange_term)
 #     return prop_term + greens_term + lagrange_term
 # end
-
-function schwinger_dyson(L, syk::SYKData; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
-	t = 0.5; b = 2; err=0
-	Σ = Σ_init
-	G = G_SD(Σ, syk)
-	for i=1:max_iters
-		Σ = Σ_SD(G, syk)
-		G_new = t * G_SD(Σ, syk) + (1 - t) * G
-		err_new = sum(abs.(G_new - G)) / sum(abs.(G))
-		isapprox(err_new, 0) && break
-		err_new > err && (t /= b)
-		err = err_new
-		G = G_new
-        i == max_iters && println("Exceeded iterations!")
-	end
-	return Σ, G
-end
 
 
 function sre_saddlepoint(L, βs, α, q, N, J; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
