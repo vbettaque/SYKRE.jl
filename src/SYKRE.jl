@@ -149,58 +149,105 @@ end
 # Σ_fft[1] = -1
 # Σ_init = real(fft(Σ_fft)) / (2 * syk.β)
 
-using LinearAlgebra
+# using LinearAlgebra
+# using SkewLinearAlgebra
+
+# N = 1
+# β = 2
+# J = 1.
+# q = 4
+# M = 4
+# L = 6
+
+# D_minus = SREMatrix.differential(L; anti_periodic=true)
+# D_plus = SREMatrix.differential(L; anti_periodic=false)
+
+# replica_I = Matrix{Float64}(I, 2, 2)
+
+# replica_corrs = [1 0.5; 0.5 1]
+
+# syk = SYK.SYKData(N, J, q, M, β)
+
+# Δτ = syk.β/L
+# Σ_init = (Δτ)^2 * SkewHermitian(syk.J^2 * map(g -> g^(syk.q-1), inv(D_minus)))
+
+# Σ, G = SREMatrix.schwinger_dyson(L, syk; Σ_init = Σ_init)
+
+# Σ
+# pfaffian(Σ)
+# pfaffian(D_plus - Σ_init)
+# pfaffian(D_minus - Σ_init)
+# pfaffian(kron(replica_I, D_plus) - Δτ^2 * kron(replica_corrs, Σ))
+
+# using Plots
+# τs, G_avg, _ = time_invariance(G, syk.β)
+
+# p = plot(τs[2:2:L], -G_avg[2:2:L])
+# ylims!(0, 0.5)
+# display(p)
+
+# D_rep = kron(replica_I, D_minus)
+
+# inv(D_rep)
+
+# (D_minus - D_plus)/2
+
+# [1 2; 2 1].^2
+
+# D_minus
+# D_plus
+
+
+
+# L = 200
+# D_minus = SREMatrix.differential(L; anti_periodic=true)
+# D_plus = SREMatrix.differential(L; anti_periodic=false)
+# eta = D_plus - D_minus
+# pfaffian(D_plus - eta)
+# pfaffian(D_minus - eta)
+
+
+using .SYK
+using Plots
 using SkewLinearAlgebra
 
 N = 1
-β = 2
 J = 1.
 q = 4
-M = 4
-L = 6
+M = 1
+L = 500
 
-D_minus = SREMatrix.differential(L; anti_periodic=true)
-D_plus = SREMatrix.differential(L; anti_periodic=false)
+Ts = LinRange(0.5, 1, 10)
 
-replica_I = Matrix{Float64}(I, 2, 2)
+βs = 1.0./Ts
+free_energies = zeros(length(βs))
+Σ_init = SkewHermitian(zeros(L, L))
 
-replica_corrs = [1 0.5; 0.5 1]
+for i in reverse(eachindex(βs))
+    println(i)
+    β = βs[i]
+    syk = SYK.SYKData(N, J, q, M, β)
+    free_energies[i], Σ_init_ = SYKMatrix.free_energy(L, syk; Σ_init = Σ_init)
+    Σ_init = Σ_init_
+end
 
-syk = SYK.SYKData(N, J, q, M, β)
+p = plot(Ts, free_energies, label="J = 1, q = 4")
+xaxis!("T")
+yaxis!("F(T)")
 
-Δτ = syk.β/L
-Σ_init = (Δτ)^2 * SkewHermitian(syk.J^2 * map(g -> g^(syk.q-1), inv(D_minus)))
-
-Σ, G = SREMatrix.schwinger_dyson(L, syk; Σ_init = Σ_init)
-
-Σ
-pfaffian(Σ)
-pfaffian(D_plus - Σ_init)
-pfaffian(D_minus - Σ_init)
-pfaffian(kron(replica_I, D_plus) - Δτ^2 * kron(replica_corrs, Σ))
-
-using Plots
-τs, G_avg, _ = time_invariance(G, syk.β)
-
-p = plot(τs[2:2:L], -G_avg[2:2:L])
-ylims!(0, 0.5)
+plot!(Ts, -Ts * log(2) / 2 - 1/(4*q^2) * 1.0 ./ Ts)
 display(p)
 
-D_rep = kron(replica_I, D_minus)
+Σ_init = SkewHermitian(zeros(L, L))
+syk = SYK.SYKData(N, J, q, M, 1)
+pfaffian(SYKMatrix.differential(8) / 2^(1/2^(8/2)))
 
-inv(D_rep)
+SYKMatrix.G_SD(Σ_init, syk)
 
-(D_minus - D_plus)/2
-
-D_minus
-D_plus
+using LinearAlgebra
+pfaffian(inv(inv([1 0 0 0 0 1; -1 1 0 0 0 0; 0 -1 1 0 0 0; 0 0 -1 1 0 0; 0 0 0 -1 1 0; 0 0 0 0 -1 1]) -0.5 * I)/2)
 
 
 
-L = 200
-D_minus = SREMatrix.differential(L; anti_periodic=true)
-D_plus = SREMatrix.differential(L; anti_periodic=false)
-eta = D_plus - D_minus
-pfaffian(D_plus - eta)
-pfaffian(D_minus - eta)
+
 end
