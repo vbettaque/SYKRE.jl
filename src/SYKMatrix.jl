@@ -60,14 +60,20 @@ function action(Σ, G, syk::SYKData)
     prop_term = -log(det(D - Δτ^2 * Σ))/2
     greens_term = -1/2 * syk.J^2/syk.q * Δτ^2 * sum(G.^syk.q)
     lagrange_term = 1/2 * Δτ^2 * tr(G * transpose(Σ))
-    return prop_term + greens_term + lagrange_term
+    return syk.N * (prop_term + greens_term + lagrange_term)
 end
 
 
 function free_energy(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
     Σ, G = schwinger_dyson(L, syk; Σ_init = Σ_init, max_iters=max_iters)
-    logZ_saddle = - syk.N * action(Σ, G, syk)
+    logZ_saddle = - action(Σ, G, syk)
     return - logZ_saddle / syk.β, Σ
+end
+
+function log_purity(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
+    syk_2β = SYKData(syk.N, syk.J, syk.q, syk.M, 2*syk.β)
+    Σ, G = schwinger_dyson(L, syk_2β; Σ_init = Σ_init, max_iters=max_iters)
+    return -action(Σ, G, syk), Σ
 end
 
 

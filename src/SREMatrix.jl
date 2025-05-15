@@ -2,7 +2,6 @@ module SREMatrix
 
 using SparseArrays
 using LinearAlgebra
-using SkewLinearAlgebra
 
 using ..SYK
 
@@ -22,7 +21,7 @@ function differential(L; anti_periodic=true)
 	return Matrix(sparse(rows, columns, values))
 end
 
-function G_SD(Σ::SkewHermitian, syk::SYKData)
+function G_SD(Σ, syk::SYKData)
     @assert iseven(syk.M)
 	L, _ = size(Σ)
     Δτ = syk.β/L

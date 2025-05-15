@@ -100,46 +100,70 @@ end
 
 # end
 
-begin
+# begin
 
-N = 1
-J = 1.
-q = 4
-M = 1
-L = 500
+# N = 1
+# J = 1.
+# q = 4
+# M = 1
+# L = 500
 
-Ts = LinRange(1, 10, 10)
+# Ts = LinRange(1, 10, 10)
 
-βs = 1.0./Ts
-renyi2s = zeros(length(βs))
+# βs = 1.0./Ts
+# renyi2s = zeros(length(βs))
 
-Σ_β_init = zeros(L, L)
-Σ_2β_init = zeros(4L, 4L)
+# Σ_β_init = zeros(L, L)
+# Σ_2β_init = zeros(4L, 4L)
 
-for i in reverse(eachindex(βs))
-    println(i)
-    β = βs[i]
-    syk = SYK.SYKData(N, J, q, M, β)
-    global renyi2s[i], Σ_β_init, Σ_2β_init = SYKMatrix.renyi2(L, syk; Σ_β_init=Σ_β_init, Σ_2β_init=Σ_2β_init, max_iters=1000)
-end
+# for i in reverse(eachindex(βs))
+#     println(i)
+#     β = βs[i]
+#     syk = SYK.SYKData(N, J, q, M, β)
+#     global renyi2s[i], Σ_β_init, Σ_2β_init = SYKMatrix.renyi2(L, syk; Σ_β_init=Σ_β_init, Σ_2β_init=Σ_2β_init, max_iters=1000)
+# end
 
-p = plot(Ts, renyi2s, label="J = 1, q = 4, L=1000")
-xaxis!("T")
-yaxis!("S_2")
+# p = plot(Ts, renyi2s, label="J = 1, q = 4, L=1000")
+# xaxis!("T")
+# yaxis!("S_2")
 
 
 
-end
+# end
 
-D_minus = SREMatrix.differential(8; anti_periodic=true)
-D_plus = SREMatrix.differential(8; anti_periodic=false)
+L = 1000
+L_rep = L÷2
 
-G = inv(D_minus)
-Σ = G.^3
-prop_minus = D_minus - Σ
-prop_plus = D_plus - Σ
-inv(prop_plus)
-det(prop_plus)
-det(prop_minus)
+β = 1
+
+Δτ = β/L_rep
+
+syk = SYKData(1, 1, 4, 1, β)
+
+I_rep = [1 0; 0 1]
+
+D_minus = SREMatrix.differential(L_rep, anti_periodic=true)
+D_plus = SREMatrix.differential(L_rep; anti_periodic=false)
+
+D_minus_rep = kron(I_rep, D_minus)
+D_plus_rep = kron(I_rep, D_plus)
+
+purity, Σ = SYKMatrix.log_purity(L, syk)
+Σ
+
+prop_minus = D_minus_rep - Δτ^2 * Σ
+prop_plus = D_plus_rep - Δτ^2 * Σ
+
+pfaff_minus = sqrt(det(prop_minus))
+pfaff_plus = sqrt(det(prop_plus))
+
+p_plus = pfaff_plus / (pfaff_minus + pfaff_plus)
+
+G = p_plus * inv(prop_plus) + (1-p_plus) * inv(prop_minus)
+
+Σ_new = syk.J * G.^(syk.q-1)
+
+sqrt(det(D_minus_rep - Δτ^2 * Σ_new))
+sqrt(det(D_plus_rep - Δτ^2 * Σ_new))
 
 inv(SREMatrix.differential(8; anti_periodic=true))
