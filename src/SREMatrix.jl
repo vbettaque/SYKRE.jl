@@ -6,12 +6,20 @@ using SkewLinearAlgebra
 
 using ..SYK
 
+# function differential(L; anti_periodic=true)
+# 	rows = repeat(1:L, inner=2)
+# 	values = repeat([-1, 1], L)
+# 	columns = rows + values; columns[1] = L; columns[2*L] = 1
+# 	anti_periodic && (values[1] *= -1; values[2*L] *= -1)
+# 	return SkewHermitian(Matrix(sparse(rows, columns, float.(values))))
+# end
+
 function differential(L; anti_periodic=true)
 	rows = repeat(1:L, inner=2)
-	values = repeat([-1, 1], L)
-	columns = rows + values; columns[1] = L; columns[2*L] = 1
-	anti_periodic && (values[1] *= -1; values[2*L] *= -1)
-	return SkewHermitian(Matrix(sparse(rows, columns, float.(values))))
+	values = repeat([-1., 1.], L)
+	columns = rows + repeat([-1, 0], L); columns[1] = L
+	values[1] *= anti_periodic ? -1 : 1
+	return Matrix(sparse(rows, columns, values))
 end
 
 function G_SD(Σ::SkewHermitian, syk::SYKData)

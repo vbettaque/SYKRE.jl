@@ -21,4 +21,24 @@ function free_energy_q2(β, J; N=1)
     return E_0 - logZ / β
 end
 
+function zero_temperature_entropy(q; N=1)
+    S_0 = N * log(2)/2
+    f(x, p) = π * (1/2 - x) * tan(π * x)
+    domain = (0, 1/q)
+    prob = IntegralProblem(f, domain)
+    S_0 -= N * solve(prob, QuadGKJL(); reltol = 1e-3, abstol = 1e-3).u
+    return S_0
+end
+
+function high_temp_free_energy(β, q, J; N=1)
+    J_q = J * sqrt(q) / 2^((q-1)/2)
+    x = β * J_q^2
+    υ = x - x^3/8 + 65 * x^5/(16 * factorial(5)) - 3787 * x^7 / (64 * factorial(7))
+    logZ = log(2)/2
+    logZ += υ / q^2 * (tan(υ / 2) - υ / 4)
+    logZ += υ / q^3 * (υ - 2 * tan(υ / 2) * (1 - υ^2 / 12))
+    return -N * logZ / β
+end
+
+
 end

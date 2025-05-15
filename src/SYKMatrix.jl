@@ -71,7 +71,7 @@ function free_energy(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
 end
 
 
-function renyi_2(L_β, syk_β::SYKData; Σ_β_init = zeros(L_β, L_β), Σ_2β_init = zeros(4L_β, 4L_β), max_iters=10000)
+function renyi2(L_β, syk_β::SYKData; Σ_β_init = zeros(L_β, L_β), Σ_2β_init = zeros(4L_β, 4L_β), max_iters=10000)
     L_2β = 4 * L_β
     syk_2β = SYKData(syk_β.N, syk_β.J, syk_β.q, syk_β.M, 2*syk_β.β)
     Σ_β, G_β = schwinger_dyson(L_β, syk_β; Σ_init = Σ_β_init, max_iters=max_iters)
@@ -80,7 +80,7 @@ function renyi_2(L_β, syk_β::SYKData; Σ_β_init = zeros(L_β, L_β), Σ_2β_i
     logZ_β_saddle = - syk_β.N * log(2, ℯ) * action(Σ_β, G_β, syk_β)
     logZ_2β_saddle = - syk_β.N * log(2, ℯ) * action(Σ_2β, G_2β, syk_2β)
 
-    return -(logZ_2β_saddle - 2 * logZ_β_saddle)
+    return -(logZ_2β_saddle - 2 * logZ_β_saddle), Σ_β, Σ_2β
 end
 
 end
