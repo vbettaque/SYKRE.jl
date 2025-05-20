@@ -36,6 +36,7 @@ function G_SD(Σ, syk::SYKData)
     prop_minus = D_minus - Δτ^2 * Σ
 	prop_plus = D_plus - Δτ^2 * Σ
 	pfaff_minus = sqrt(det(prop_minus))
+    det(prop_plus) < 0 && return NaN
 	pfaff_plus = sqrt(det(prop_plus))
 	p_plus = pfaff_plus / (pfaff_minus + pfaff_plus)
     println(p_plus)
@@ -57,17 +58,30 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000
 	t = 0.5; b = 2; err=0
 	Σ = Σ_init
 	G = G_SD(Σ, syk)
+    Σ = Σ_SD(G, syk)
 	for i=1:max_iters
-		Σ = Σ_SD(G, syk)
 		G_new = t * G_SD(Σ, syk) + (1 - t) * G
 		err_new = sum(abs.(G_new - G)) #/ sum(abs.(G))
 		if isapprox(err_new, 0; atol=1e-6)
+            G = G_new
+            Σ = Σ_SD(G, syk)
             println("Converged after ", i, " iterations")
             break
         end
-		err_new > err && (t /= b)
+		if (err_new > err && i > 1)
+            t /= b
+            i -= 1
+            continue
+        end
+        Σ_new = Σ_SD(G_new, syk)
+        if any(isnan.(G_SD(Σ_new, syk)))
+            t /= b
+            i -= 1
+            continue
+        end
 		err = err_new
 		G = G_new
+        Σ = Σ_new
         i == max_iters && println("Exceeded iterations!")
 	end
 	return Σ, G

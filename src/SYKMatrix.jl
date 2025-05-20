@@ -45,10 +45,16 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000
 		G_new = t * G_SD(Σ, syk) + (1 - t) * G
 		err_new = sum(abs.(G_new - G)) #/ sum(abs.(G))
 		if isapprox(err_new, 0; atol=1e-10)
+            G = G_new
+            Σ = Σ_SD(G, syk)
             println("Converged after ", i, " iterations")
             break
         end
-		err_new > err && (t /= b)
+        if err_new > err && i > 1
+            t /= b
+            i -= 1
+            continue
+        end
 		err = err_new
 		G = G_new
         i == max_iters && println("Exceeded iterations!")
