@@ -21,6 +21,7 @@ function differential(L)
 	return Matrix(sparse(rows, columns, values))
 end
 
+
 function G_SD(Σ, syk::SYKData)
 	L, _ = size(Σ)
     Δτ = syk.β/L
@@ -29,9 +30,11 @@ function G_SD(Σ, syk::SYKData)
     return inv(prop)
 end
 
+
 function Σ_SD(G, syk::SYKData)
 	return syk.J^2 * G.^(syk.q-1)
 end
+
 
 function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
 	t = 0.5; b = 2; err=0
@@ -40,8 +43,8 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000
 	for i=1:max_iters
 		Σ = Σ_SD(G, syk)
 		G_new = t * G_SD(Σ, syk) + (1 - t) * G
-		err_new = sum(abs.(G_new - G)) / sum(abs.(G))
-		if isapprox(err_new, 0)
+		err_new = sum(abs.(G_new - G)) #/ sum(abs.(G))
+		if isapprox(err_new, 0; atol=1e-10)
             println("Converged after ", i, " iterations")
             break
         end
@@ -52,6 +55,7 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000
 	end
 	return Σ, G
 end
+
 
 function action(Σ, G, syk::SYKData)
     L, _ = size(Σ)
@@ -64,11 +68,17 @@ function action(Σ, G, syk::SYKData)
 end
 
 
-function free_energy(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
+function logZ(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
     Σ, G = schwinger_dyson(L, syk; Σ_init = Σ_init, max_iters=max_iters)
-    logZ_saddle = - action(Σ, G, syk)
+    return -action(Σ, G, syk), Σ
+end
+
+
+function free_energy(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
+    logZ_saddle, Σ = logZ(L, syk; Σ_init=Σ_init, max_iters=max_iters)
     return - logZ_saddle / syk.β, Σ
 end
+
 
 function log_purity(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
     syk_2β = SYKData(syk.N, syk.J, syk.q, syk.M, 2*syk.β)
@@ -88,5 +98,6 @@ function renyi2(L_β, syk_β::SYKData; Σ_β_init = zeros(L_β, L_β), Σ_2β_in
 
     return -(logZ_2β_saddle - 2 * logZ_β_saddle), Σ_β, Σ_2β
 end
+
 
 end

@@ -4,6 +4,7 @@ using SparseArrays
 using LinearAlgebra
 
 using ..SYK
+using ..SYKMatrix
 
 # function differential(L; anti_periodic=true)
 # 	rows = repeat(1:L, inner=2)
@@ -21,59 +22,49 @@ function differential(L; anti_periodic=true)
 	return Matrix(sparse(rows, columns, values))
 end
 
+
 function G_SD(Σ, syk::SYKData)
     @assert iseven(syk.M)
 	L, _ = size(Σ)
-    Δτ = syk.β/L
-	D_minus = differential(L)
-    D_plus = differential(L, anti_periodic=false)
+    @assert iszero(L % syk.M)
+    L_rep = L ÷ syk.M
+    @assert iseven(L_rep)
+    Δτ = syk.β/L_rep
+    I_rep = Matrix{Float64}(I, syk.M, syk.M)
+	D_minus = kron(I_rep, differential(L_rep))
+    D_plus = kron(I_rep, differential(L_rep, anti_periodic=false))
     prop_minus = D_minus - Δτ^2 * Σ
 	prop_plus = D_plus - Δτ^2 * Σ
-	pfaff_minus = pfaffian(prop_minus)^syk.M
-	pfaff_plus = pfaffian(prop_plus)^syk.M
-    # println("pfaff_plus = ", pfaff_plus)
-    # println("pfaff_minus = ", pfaff_minus)
+	pfaff_minus = sqrt(det(prop_minus))
+	pfaff_plus = sqrt(det(prop_plus))
 	p_plus = pfaff_plus / (pfaff_minus + pfaff_plus)
-    # println("p_plus = ", p_plus)
-    # isapprox(p_plus, 0; atol=1e-50) && return inv(prop_minus)
-    # isapprox(p_plus, 1; atol=1e-50) && return inv(prop_plus)
+    println(p_plus)
 	return (1 - p_plus) * inv(prop_minus) + p_plus * inv(prop_plus)
 end
 
-function Σ_SD(G::SkewHermitian, syk::SYKData)
-	return SkewHermitian(syk.J^2 * map(g -> g^(syk.q-1), G))
+
+function Σ_SD(G, syk::SYKData)
+	return syk.J^2 * G.^(syk.q - 1)
 end
 
-# function action(Σ::SkewHermitian, G::SkewHermitian, β, M, q, J; sre=false)
-#     L, _ = size(Σ)
-#     Δτ = β/L
-#     D_minus = differential(L)
-#     prop_minus = D_minus - Δτ^2 * Σ
-#     prop_term = 0
-#     if sre
-#         D_plus = differential(L, anti_periodic=false)
-# 	    prop_plus = D_plus - Δτ^2 * Σ
-#         prop_term = -log(pfaffian(prop_minus)^M + pfaffian(prop_plus)^M)
-#     else
-#         prop_term = -M * log(pfaffian(prop_minus))
-#     end
-#     # println("prop = ", prop_term)
-#     greens_term = -Δτ^2 * M/2 * J^2/q * sum(map(g -> g^q, G))
-#     # println("greens = ", greens_term)
-#     lagrange_term = Δτ^2 * M/2 * tr(G * transpose(Σ))
-#     # println("lagrange = ", lagrange_term)
-#     return prop_term + greens_term + lagrange_term
-# end
 
-function schwinger_dyson(L, syk::SYKData; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
+function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
+    @assert iseven(L)
+    @assert iseven(syk.M)
+    @assert iseven(syk.q)
+    @assert iszero(L % syk.M)
+
 	t = 0.5; b = 2; err=0
 	Σ = Σ_init
 	G = G_SD(Σ, syk)
 	for i=1:max_iters
 		Σ = Σ_SD(G, syk)
 		G_new = t * G_SD(Σ, syk) + (1 - t) * G
-		err_new = sum(abs.(G_new - G)) / sum(abs.(G))
-		isapprox(err_new, 0) && break
+		err_new = sum(abs.(G_new - G)) #/ sum(abs.(G))
+		if isapprox(err_new, 0; atol=1e-6)
+            println("Converged after ", i, " iterations")
+            break
+        end
 		err_new > err && (t /= b)
 		err = err_new
 		G = G_new
@@ -83,30 +74,57 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = SkewHermitian(zeros(L, L)), 
 end
 
 
-# function sre_saddlepoint(L, βs, α, q, N, J; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
-#     steps = length(βs)
-#     M = 2 * α
-#     sres = zeros(steps)
-#     Σ_α = Σ_init
-#     Σ_2 = Σ_init
-#     Σ_Z = Σ_init
-#     for i=1:steps
-#         println(i, " of ", steps)
+function action(Σ, G, syk::SYKData)
+    L, _ = size(Σ)
+    @assert iseven(L)
+    @assert iseven(syk.M)
+    @assert iseven(syk.q)
+    @assert iszero(L % syk.M)
+    L_rep = L ÷ syk.M
+    @assert iseven(L_rep)
 
-#         Σ_α, G_α = schwinger_dyson(L, βs[i], M, q, J, Σ_init=Σ_α, sre=true, max_iters=max_iters)
-#         Σ_2, G_2 = schwinger_dyson(L, βs[i], 2, q, J, Σ_init=Σ_2, sre=true, max_iters=max_iters)
-#         Σ_Z, G_Z = schwinger_dyson(L, βs[i], 1, q, J, Σ_init=Σ_Z, max_iters=max_iters)
+    Δτ = syk.β/L_rep
+    I_rep = Matrix{Float64}(I, syk.M, syk.M)
+	D_minus = kron(I_rep, differential(L_rep))
+    D_plus = kron(I_rep, differential(L_rep, anti_periodic=false))
+    prop_minus = D_minus - Δτ^2 * Σ
+	prop_plus = D_plus - Δτ^2 * Σ
 
-#         sre_α_saddle = -N * log(2, ℯ) * action(Σ_α, G_α, βs[i], M, q, J, sre=true)
-#         sre_2_saddle = -N * log(2, ℯ) * action(Σ_2, G_2, βs[i], 2, q, J, sre=true)
-#         logZ_saddle = -N * log(2, ℯ) * action(Σ_Z, G_Z, βs[i], 1, q, J)
+    prop_term = -log(sqrt(det(prop_minus)) + sqrt(det(prop_plus)))
+    greens_term = -1/2 * syk.J^2/syk.q * Δτ^2 * sum(G.^syk.q)
+    lagrange_term = 1/2 * Δτ^2 * tr(G * transpose(Σ))
+    return syk.N * (prop_term + greens_term + lagrange_term)
+end
 
-#         sres[i] = (sre_α_saddle - sre_2_saddle) / (1 - α) + 2 * logZ_saddle
-#         println("(T, SRE) = (", 1/βs[i], ", ", sres[i], ")")
-#     end
 
-#     return sres
-# end
+function sre(L, syk::SYKData; Σ_M_init = zeros(L, L), Σ_2_init = zeros(L, L), Σ_Z_init = zeros(L, L), max_iters=10000)
+    @assert iseven(syk.M)
+    @assert iseven(syk.q)
+    @assert iseven(L)
+    @assert iszero(L % syk.M)
+    @assert iseven(L ÷ syk.M)
+    @assert iseven(L ÷ 2)
+
+    syk_M = syk
+    syk_2 = SYKData(syk.N, syk.J, syk.q, 2, syk.β)
+    syk_Z = SYKData(syk.N, syk.J, syk.q, 1, syk.β)
+
+    Σ_2, G_2 = schwinger_dyson(L, syk_2; Σ_init=Σ_2_init, max_iters=max_iters)
+    Σ_M, G_M = schwinger_dyson(L, syk_M; Σ_init=Σ_M_init, max_iters=max_iters)
+
+    logtr_swap_M = - log(2, ℯ) * action(Σ_M, G_M, syk_M)
+    logtr_swap_2 = - log(2, ℯ) * action(Σ_2, G_2, syk_2)
+    logZ, Σ_Z = SYKMatrix.logZ(L, syk_Z; Σ_init=Σ_Z_init, max_iters=max_iters)
+
+    println("logtr_swap_M = ", logtr_swap_M)
+    println("logtr_swap_2 = ", logtr_swap_2)
+    println("logZ = ", logZ)
+    sre = (logtr_swap_M - logtr_swap_2) / (1 - syk.M/2) + 2 * log(2, ℯ) * logZ
+    println("sre = ", sre)
+    return sre, Σ_M, Σ_2, Σ_Z
+end
+
+log(2, ℯ)
 
 
 #  # Add loop corrections?
