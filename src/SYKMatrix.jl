@@ -36,7 +36,7 @@ function Σ_SD(G, syk::SYKData)
 end
 
 
-function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
+function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
 	t = 0.5; b = 2; err=0
 	Σ = Σ_init
 	G = G_SD(Σ, syk)
@@ -74,26 +74,26 @@ function action(Σ, G, syk::SYKData)
 end
 
 
-function logZ(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
+function logZ(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
     Σ, G = schwinger_dyson(L, syk; Σ_init = Σ_init, max_iters=max_iters)
     return -action(Σ, G, syk), Σ
 end
 
 
-function free_energy(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
+function free_energy(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
     logZ_saddle, Σ = logZ(L, syk; Σ_init=Σ_init, max_iters=max_iters)
     return - logZ_saddle / syk.β, Σ
 end
 
 
-function log_purity(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
+function log_purity(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
     syk_2β = SYKData(syk.N, syk.J, syk.q, syk.M, 2*syk.β)
     Σ, G = schwinger_dyson(L, syk_2β; Σ_init = Σ_init, max_iters=max_iters)
     return -action(Σ, G, syk), Σ
 end
 
 
-function renyi2(L_β, syk_β::SYKData; Σ_β_init = zeros(L_β, L_β), Σ_2β_init = zeros(4L_β, 4L_β), max_iters=10000)
+function renyi2(L_β, syk_β::SYKData; Σ_β_init = zeros(L_β, L_β), Σ_2β_init = zeros(4L_β, 4L_β), max_iters=1000)
     L_2β = 4 * L_β
     syk_2β = SYKData(syk_β.N, syk_β.J, syk_β.q, syk_β.M, 2*syk_β.β)
     Σ_β, G_β = schwinger_dyson(L_β, syk_β; Σ_init = Σ_β_init, max_iters=max_iters)

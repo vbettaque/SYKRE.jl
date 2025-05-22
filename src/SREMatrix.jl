@@ -22,6 +22,23 @@ function differential(L; anti_periodic=true)
 	return Matrix(sparse(rows, columns, values))
 end
 
+function pfaffians(Σ, syk::SYKData)
+    @assert iseven(syk.M)
+	L, _ = size(Σ)
+    @assert iszero(L % syk.M)
+    L_rep = L ÷ syk.M
+    @assert iseven(L_rep)
+    Δτ = syk.β/L_rep
+    I_rep = Matrix{Float64}(I, syk.M, syk.M)
+    D_minus = kron(I_rep, differential(L_rep))
+    D_plus = kron(I_rep, differential(L_rep, anti_periodic=false))
+    prop_minus = D_minus - Δτ^2 * Σ
+	prop_plus = D_plus - Δτ^2 * Σ
+    pfaff_minus = sqrt(det(prop_minus))
+	pfaff_plus = det(prop_plus) >= 0 ? sqrt(det(prop_plus)) : NaN
+    return pfaff_minus, pfaff_plus
+end
+
 
 function G_SD(Σ, syk::SYKData)
     @assert iseven(syk.M)
@@ -49,7 +66,7 @@ function Σ_SD(G, syk::SYKData)
 end
 
 
-function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000)
+function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
     @assert iseven(L)
     @assert iseven(syk.M)
     @assert iseven(syk.q)
@@ -62,7 +79,7 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=10000
 	for i=1:max_iters
 		G_new = t * G_SD(Σ, syk) + (1 - t) * G
 		err_new = sum(abs.(G_new - G)) #/ sum(abs.(G))
-		if isapprox(err_new, 0; atol=1e-6)
+		if isapprox(err_new, 0; atol=1e-8)
             G = G_new
             Σ = Σ_SD(G, syk)
             println("Converged after ", i, " iterations")
@@ -111,7 +128,7 @@ function action(Σ, G, syk::SYKData)
 end
 
 
-function sre(L, syk::SYKData; Σ_M_init = zeros(L, L), Σ_2_init = zeros(L, L), Σ_Z_init = zeros(L, L), max_iters=10000)
+function sre(L, syk::SYKData; Σ_M_init = zeros(L, L), Σ_2_init = zeros(L, L), Σ_Z_init = zeros(L, L), max_iters=1000)
     @assert iseven(syk.M)
     @assert iseven(syk.q)
     @assert iseven(L)
@@ -137,30 +154,5 @@ function sre(L, syk::SYKData; Σ_M_init = zeros(L, L), Σ_2_init = zeros(L, L), 
     println("sre = ", sre)
     return sre, Σ_M, Σ_2, Σ_Z
 end
-
-log(2, ℯ)
-
-
-#  # Add loop corrections?
-# function logZ_saddlepoint(L, β, M, q, N, J; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
-#     Σ, G = schwinger_dyson(L, β, M, q, J, Σ_init=Σ_init, max_iters=max_iters)
-#     return -N * log(2, ℯ) * action(Σ, G, β, M, q, J)
-# end
-
-# function renyi2_saddlepoint(L, β, q, N, J; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
-#     Σ, G = schwinger_dyson(L, β, 2, q, J, Σ_init=Σ_init, sre=true, max_iters=max_iters)
-#     return -N * log(2, ℯ) * action(Σ, G, β, 2, q, J, sre=true)
-# end
-
-#  # Add loop corrections?
-# function sre_saddlepoint(L, β, α, q, N, J; Σ_init = SkewHermitian(zeros(L, L)), max_iters=10000)
-#     M = 2 * α
-#     Σ, G = schwinger_dyson(L, β, M, q, J, Σ_init=Σ_init, sre=true, max_iters=max_iters)
-#     sre = -N * log(2, ℯ) * action(Σ, G, β, M, q, J, sre=true)
-#     # println("sre = ", sre)
-#     renyi2 = renyi2_saddlepoint(L, β, q, N, J; Σ_init=Σ_init, max_iters=max_iters)
-#     # println("renyi = ", renyi2)
-#     return (sre - renyi2) / (1 - α) + 2 * logZ_saddlepoint(L, β, 1, q, N, J; Σ_init=Σ_init, max_iters=max_iters)
-# end
 
 end
