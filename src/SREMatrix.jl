@@ -78,8 +78,8 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
     Σ = Σ_SD(G, syk)
 	for i=1:max_iters
 		G_new = t * G_SD(Σ, syk) + (1 - t) * G
-		err_new = sum(abs.(G_new - G)) #/ sum(abs.(G))
-		if isapprox(err_new, 0; atol=1e-8)
+		err_new = sum(abs.(G_new - G)) / sum(abs.(G))
+		if isapprox(err_new, 0; atol=1e-10)
             G = G_new
             Σ = Σ_SD(G, syk)
             println("Converged after ", i, " iterations")
@@ -122,9 +122,8 @@ function action(Σ, G, syk::SYKData)
 	prop_plus = D_plus - Δτ^2 * Σ
 
     prop_term = -log(sqrt(det(prop_minus)) + sqrt(det(prop_plus)))
-    greens_term = -1/2 * syk.J^2/syk.q * Δτ^2 * sum(G.^syk.q)
-    lagrange_term = 1/2 * Δτ^2 * tr(G * transpose(Σ))
-    return syk.N * (prop_term + greens_term + lagrange_term)
+    on_shell_term = 1/2 * syk.J^2 * (1 - 1/syk.q) * Δτ^2 * sum(G.^syk.q)
+    return syk.N * (prop_term + on_shell_term)
 end
 
 
