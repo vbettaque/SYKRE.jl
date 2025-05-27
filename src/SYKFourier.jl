@@ -39,7 +39,7 @@ function Σ_SD_real(G_real::AbstractArray, syk::SYKData)
 	return syk.J^2 * G_real.^(syk.q - 1)
 end
 
-function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=1000)
+function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=100000)
 	t = 0.5; b = 2; err=0 # Lerp and lerp refinement factors
 	Σ_real = Σ_init
     IFFT = plan_ifft(Σ_real, 1; flags=FFTW.MEASURE)

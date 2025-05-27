@@ -80,12 +80,12 @@ function Σ_SD_real(G_real::AbstractArray, syk::SYKData)
 	return syk.J^2 * G_real.^(syk.q - 1)
 end
 
-function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=1000)
-	t = 0.5; b = 2; err=0 # Lerp and lerp refinement factors
+function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=100000)
 	Σ_real = Σ_init
     IFFT = plan_ifft(Σ_real, 1; flags=FFTW.MEASURE)
     Σ_freq = syk.β * IFFT * Σ_real
 	G_freq = G_SD_freq(Σ_freq, syk)
+    t = 0.001; b = 2; err=0 # Lerp and lerp refinement factors
     FFT = plan_fft(G_freq, 1; flags=FFTW.MEASURE)
     G_real = real(FFT * G_freq) / syk.β
     Σ_real = Σ_SD_real(G_real, syk)
@@ -93,7 +93,7 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_
         Σ_freq = syk.β * IFFT * Σ_real
 		G_freq_new = t * G_SD_freq(Σ_freq, syk) + (1 - t) * G_freq
 		err_new = sum(abs.(G_freq_new - G_freq))
-		if isapprox(err_new, 0; atol=1e-10)
+		if isapprox(err_new, 0; atol=1e-9)
             G_real = real(FFT * G_freq_new) / syk.β
             Σ_real = Σ_SD_real(G_real, syk)
             println("Converged after ", i, " iterations")
@@ -113,6 +113,7 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_
             continue
         end
 		err = err_new
+        println("err = ", err, " t = ", t)
 		G_freq = G_freq_new
         G_real = G_real_new
         Σ_freq = Σ_freq_new
@@ -136,7 +137,7 @@ function action(Σ_real, G_real, syk::SYKData)
     return syk.N * (prop_term + on_shell_term)
 end
 
-function sre(L, syk::SYKData; Σ_M_init = zeros(L, syk.M, syk.M), Σ_2_init = zeros(L, 2, 2), Σ_Z_init = zeros(L, 1, 1), max_iters=1000)
+function sre(L, syk::SYKData; Σ_M_init = zeros(L, syk.M, syk.M), Σ_2_init = zeros(L, 2, 2), Σ_Z_init = zeros(L, 1, 1), max_iters=100000)
     @assert iseven(syk.M)
     @assert iseven(syk.q)
     @assert isodd(L)
