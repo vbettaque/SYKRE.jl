@@ -67,7 +67,6 @@ end
 
 
 function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
-    @assert iseven(L)
     @assert iseven(syk.M)
     @assert iseven(syk.q)
     @assert iszero(L % syk.M)

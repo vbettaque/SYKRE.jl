@@ -6,30 +6,23 @@ using ..SYK
 
 function det_renormed(Σ_freq::AbstractArray, syk::SYKData)
     L, M, M_ = size(Σ_freq)
-    @assert iseven(L)
     @assert M == M_ == syk.M
-    K = L ÷ 2
+    @assert isodd(L)
 
     I_rep = Matrix{Float64}(I, syk.M, syk.M)
 
     odd = isodd.(fftfreq(L, L))
     ωs = fftfreq(L, π * L / syk.β)
 
-    rep_dets = [det(I_rep + Σ_freq[i, :, :] / (im * ωs[i])) for i=1:L if odd[i]]
-    extra_det = det(I_rep + Σ_freq[K+1, :, :] / (im * ωs[K+1]))
-
+    rep_dets = [det(I_rep - im * Σ_freq[i, :, :] / ωs[i]) for i=1:L if odd[i]]
     det_renorm = reduce(*, rep_dets)
-    if iseven(K)
-        det_renorm *= conj(extra_det)
-    else
-        det_renorm /= conj(extra_det)
-    end
-    # @assert isapprox(imag(det_renorm), 0; atol=1e-10)
-    return 2 * real(det_renorm)
+
+    @assert isapprox(imag(det_renorm), 0; atol=1e-10)
+    return 2^syk.M * real(det_renorm)
 end
 
-function G_SD_freq(Σ::AbstractArray, syk::SYKData)
-    L, M, M_ = size(Σ)
+function G_SD_freq(Σ_freq::AbstractArray, syk::SYKData)
+    L, M, M_ = size(Σ_freq)
     @assert M == M_ == syk.M
     odd = isodd.(fftfreq(L, L))
     ωs = fftfreq(L, π * L / syk.β)
@@ -37,13 +30,13 @@ function G_SD_freq(Σ::AbstractArray, syk::SYKData)
     I_rep = Matrix{Float64}(I, syk.M, syk.M)
     for i=1:L
         odd[i] || continue
-        G[i, :, :] = inv(-im * ωs[i] * I_rep - Σ[i, :, :])
+        G[i, :, :] = inv(-im * ωs[i] * I_rep - Σ_freq[i, :, :])
     end
     return G
 end
 
-function Σ_SD_real(G::AbstractArray, syk::SYKData)
-	return syk.J^2 * G.^(syk.q - 1)
+function Σ_SD_real(G_real::AbstractArray, syk::SYKData)
+	return syk.J^2 * G_real.^(syk.q - 1)
 end
 
 function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=1000)
@@ -58,7 +51,7 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_
 		Σ_real = Σ_SD_real(G_real, syk)
         Σ_freq = syk.β * IFFT * Σ_real
 		G_freq_new = t * G_SD_freq(Σ_freq, syk) + (1 - t) * G_freq
-		err_new = sum(abs.(G_freq_new - G_freq)) / sum(abs.(G_freq))
+		err_new = sum(abs.(G_freq_new - G_freq))
 		if isapprox(err_new, 0; atol=1e-10)
             G_real = real(FFT * G_freq_new) / syk.β
             Σ_real = Σ_SD_real(G_real, syk)
