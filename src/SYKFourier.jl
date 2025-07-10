@@ -84,13 +84,13 @@ function action(Σ_real, G_real, syk::SYKData)
 end
 
 
-function logZ(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=1000)
+function logZ(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=100000)
     Σ, G = schwinger_dyson(L, syk; Σ_init = Σ_init, max_iters=max_iters)
-    return -action(Σ, G, syk), Σ
+    return -action(Σ, G, syk), Σ, G
 end
 
 
-function free_energy(L, syk::SYKData; Σ_init = zeros(L, M, M), max_iters=1000)
+function free_energy(L, syk::SYKData; Σ_init = zeros(L, M, M), max_iters=100000)
     logZ_saddle, Σ = logZ(L, syk; Σ_init=Σ_init, max_iters=max_iters)
     return - logZ_saddle / syk.β, Σ
 end

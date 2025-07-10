@@ -4,6 +4,7 @@ using LinearAlgebra
 using FFTW
 using ..SYK
 using ..SYKFourier
+using Plots
 
 function det_renormed(Σ_freq::AbstractArray, syk::SYKData; odd_modes = true)
     L, M, M_ = size(Σ_freq)
@@ -19,7 +20,7 @@ function det_renormed(Σ_freq::AbstractArray, syk::SYKData; odd_modes = true)
 
 
     if odd_modes
-        rep_dets = [det(I_rep - im * Σ_freq[i, :, :] / ωs[i]) for i=1:L if odd[i]]
+        rep_dets = [det(I_rep + Σ_freq[i, :, :] / (im * ωs[i])) for i=1:L if odd[i]]
         det_renorm = reduce(*, rep_dets)
         # @assert isapprox(imag(det_renorm), 0; atol=1e-10)
         return 2^syk.M * real(det_renorm)
@@ -27,12 +28,13 @@ function det_renormed(Σ_freq::AbstractArray, syk::SYKData; odd_modes = true)
 
     iszero(det(Σ_freq[1, :, :])) && return 0
 
-    rep_dets = [det(-im * ωs[i] * I_rep - Σ_freq[i, :, :]) / det(-im * ωs[i] * I_rep - Σ_freq[1, :, :]) for i=1:L if even[i]]
-    det_renorm = reduce(*, rep_dets)
-    # @assert isapprox(imag(det_renorm), 0; atol=1e-10)
-    reg_factor = det(2 * sinh(-syk.β * real(Σ_freq[1, :, :]) / 2))
+    rep_dets = [det(I_rep + (Σ_freq[i, :, :] / (im * ωs[i]))) for i=2:L if even[i]]
 
-    return reg_factor * real(det_renorm)
+    det_product = reduce(*, rep_dets)
+
+    reg_factor = real(det(-syk.β * Σ_freq[1, :, :]))
+
+    return (reg_factor * real(det_product))
 end
 
 
@@ -49,9 +51,11 @@ function p_plus(Σ_freq::AbstractArray, syk::SYKData)
     det_minus = det_renormed(Σ_freq, syk; odd_modes = true)
     @assert det_minus >= 0
     pf_minus = sqrt(det_minus)
+    println("minus = ", pf_minus)
     det_plus = det_renormed(Σ_freq, syk; odd_modes = false)
     det_plus < 0 && return NaN
     pf_plus = sqrt(det_plus)
+    println("plus = ", pf_plus)
     return pf_plus / (pf_minus + pf_plus)
 end
 
@@ -61,8 +65,8 @@ function G_SD_freq(Σ_freq::AbstractArray, syk::SYKData)
     odd = isodd.(fftfreq(L, L))
     ωs = fftfreq(L, π * L / syk.β)
     p = p_plus(Σ_freq, syk)
-    display(p)
-    # @assert !isnan(p)
+    println("p_plus = ", p)
+    @assert !isnan(p)
     isnan(p) && return NaN
     G = zeros(ComplexF64, L, M, M)
     I_rep = Matrix{Float64}(I, syk.M, syk.M)
@@ -72,6 +76,7 @@ function G_SD_freq(Σ_freq::AbstractArray, syk::SYKData)
         else
             G[i, :, :] = p * inv(-im * ωs[i] * I_rep - Σ_freq[i, :, :])
         end
+
     end
     return G
 end
@@ -85,11 +90,17 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_
     IFFT = plan_ifft(Σ_real, 1; flags=FFTW.MEASURE)
     Σ_freq = syk.β * IFFT * Σ_real
 	G_freq = G_SD_freq(Σ_freq, syk)
-    t = 0.001; b = 2; err=0 # Lerp and lerp refinement factors
+    t = 0.8; b = 2; err=0 # Lerp and lerp refinement factors
     FFT = plan_fft(G_freq, 1; flags=FFTW.MEASURE)
     G_real = real(FFT * G_freq) / syk.β
     Σ_real = Σ_SD_real(G_real, syk)
 	for i=1:max_iters
+        # τs = LinRange(0, 2 * syk.β, L)
+        # p = plot(τs, G_real[:, 1, 1], label="freq_11", title="Iteration = " * string(i))
+        # plot!(τs, G_real[:, 1, 2], label="freq_12")
+        # plot!(τs, G_real[:, 2, 1], label="freq_21")
+        # plot!(τs, G_real[:, 2, 2], label="freq_22")
+        # display(p)
         Σ_freq = syk.β * IFFT * Σ_real
 		G_freq_new = t * G_SD_freq(Σ_freq, syk) + (1 - t) * G_freq
 		err_new = sum(abs.(G_freq_new - G_freq))
@@ -135,6 +146,11 @@ function action(Σ_real, G_real, syk::SYKData)
 
     on_shell_term = 1/2 * syk.J^2 * (1 - 1/syk.q) * syk.β * Δτ * sum(G_real.^syk.q)
     return syk.N * (prop_term + on_shell_term)
+end
+
+function logZ(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=100000)
+    Σ, G = schwinger_dyson(L, syk; Σ_init = Σ_init, max_iters=max_iters)
+    return -action(Σ, G, syk), Σ, G
 end
 
 function sre(L, syk::SYKData; Σ_M_init = zeros(L, syk.M, syk.M), Σ_2_init = zeros(L, 2, 2), Σ_Z_init = zeros(L, 1, 1), max_iters=100000)

@@ -39,6 +39,11 @@ function pfaffians(Σ, syk::SYKData)
     return pfaff_minus, pfaff_plus
 end
 
+function p_plus(Σ, syk::SYKData)
+    pf_minus, pf_plus = pfaffians(Σ, syk)
+    return pf_plus / (pf_minus + pf_plus)
+end
+
 
 function G_SD(Σ, syk::SYKData)
     @assert iseven(syk.M)
@@ -65,13 +70,23 @@ function Σ_SD(G, syk::SYKData)
 	return syk.J^2 * G.^(syk.q - 1)
 end
 
+function time_invariance(M, β)
+    L, _ = size(M)
+    Δτ = β / L
+    τs = LinRange(0, 2β - Δτ, 2 * L)
+    M_invariant = zeros(2 * L)
+    M_invariant[1:L] = M[1:L, 1]
+    M_invariant[L+2:2L] = reverse(M[1, 2:L])
+    M_invariant[L+1] = (M_invariant[L] + M_invariant[L+2])/2
+    return τs, M_invariant
+end
 
 function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
     @assert iseven(syk.M)
     @assert iseven(syk.q)
     @assert iszero(L % syk.M)
 
-	t = 0.5; b = 2; err=0
+	t = 0.8; b = 2; err=0
 	Σ = Σ_init
 	G = G_SD(Σ, syk)
     Σ = Σ_SD(G, syk)
@@ -96,6 +111,7 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
             continue
         end
 		err = err_new
+        println("err = ", err, " t = ", t)
 		G = G_new
         Σ = Σ_new
         i == max_iters && println("Exceeded iterations!")
@@ -125,6 +141,10 @@ function action(Σ, G, syk::SYKData)
     return syk.N * (prop_term + on_shell_term)
 end
 
+function logZ(L, syk::SYKData; Σ_init = zeros(L,L), max_iters=1000)
+    Σ, G = schwinger_dyson(L, syk; Σ_init = Σ_init, max_iters=max_iters)
+    return -action(Σ, G, syk), Σ, G
+end
 
 function sre(L, syk::SYKData; Σ_M_init = zeros(L, L), Σ_2_init = zeros(L, L), Σ_Z_init = zeros(L, L), max_iters=1000)
     @assert iseven(syk.M)
