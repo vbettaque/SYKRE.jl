@@ -529,9 +529,9 @@ end
 
 N = 1
 J = 1.
-q = 4
+q = 2
 M = 4
-L_freq = L_freq = 2^11-1
+L_freq = 2^11
 L_matrix = 2000
 β = 4
 
@@ -544,25 +544,28 @@ G_init_matrix = inv(SREMatrix.differential(L_matrix))
 Σ_init_matrix = J^2 * G_init_matrix.^(q-1)
 
 G_init_diag = zeros(ComplexF64, L_freq)
-G_init_diag[2:end] = 1.0 ./(-im * ωs[2:end])
-G_init_diag = real(fft(G_init_diag, 1)) / β
-Σ_init_diag = J^2 * G_init_diag.^(q-1)
+G_init_diag[1:end] = -im * ωs[1:end] ./ (2 * J^2)
 
-Σ_init_off = zeros(ComplexF64, L_freq)
-Σ_init_off = 2 * J^2 ./ sqrt.(4 * J^2 .+ ωs.^2)
-Σ_init_off = real(fft(Σ_init_off, 1)) / β
+G_init_off = zeros(ComplexF64, L_freq)
+G_init_off[1:end] = sqrt.(2 * J^2 .+ ωs[1:end].^2) ./ (2 * J^2)
 
+G_init_freq = zeros(ComplexF64, L_freq, 2, 2)
+G_init_freq[:, 1, 1] = copy(G_init_diag)
+G_init_freq[:, 2, 2] = copy(G_init_diag)
+G_init_freq[:, 1, 2] = -copy(G_init_off)
+G_init_freq[:, 2, 1] = copy(G_init_off)
 
-plot(1:L_freq, Σ_init_off)
+# SREFourier.det_ratio(J^2 * G_init_freq, syk_2)
+# SREFourier.p_plus(J^2 * G_init_freq, syk_2)
 
-Σ_init_freq = zeros(L_freq, 2, 2)
-Σ_init_freq[:, 1, 1] = copy(Σ_init_diag)
-Σ_init_freq[:, 2, 2] = copy(Σ_init_diag)
-Σ_init_freq[:, 1, 2] = -copy(Σ_init_off)
-Σ_init_freq[:, 2, 1] = copy(Σ_init_off)
+Σ_init_real = J^2 * (fft(G_init_freq, 1) / β).^(q-1)
+
+SREFourier.det_ratio2(J^2 * G_init_freq, syk_2)
+
+# SREFourier.det_ratio(β * ifft(Σ_init_real, 1), syk_2)
 
 sre_matrix, Σ_2_matrix, G_2_matrix = SREMatrix.logZ(L_matrix, syk_2; Σ_init=Σ_init_matrix, max_iters=1000)
-sre_freq, Σ_2_freq, G_2_freq = SREFourier.logZ(L_freq, syk_2; Σ_init=Σ_init_freq, max_iters=100000)
+sre_freq, Σ_2_freq, G_2_freq = SREFourier.logZ(L_freq, syk_2; Σ_init=Σ_init_real, max_iters=100000)
 
 Δτ_matrix = β / L_matrix
 L_rep_matrix = L_matrix ÷ 2
@@ -579,9 +582,6 @@ for i=1:2
     end
 end
 
-Δτ_freq = β / L_freq
-τs_freq = LinRange(0, 2*β - Δτ_freq, L_freq)
-
 p = plot(τs_matrix, G_2_matrix_inv[:, 1, 1], label="matrix_11")
 plot!(τs_matrix, G_2_matrix_inv[:, 1, 2], label="matrix_12")
 plot!(τs_matrix, G_2_matrix_inv[:, 2, 1], label="matrix_21")
@@ -593,6 +593,9 @@ ylims!(-0.6, 0.6)
 
 display(p)
 
+Δτ_freq = β / L_freq
+τs_freq = LinRange(0, 2*β - Δτ_freq, L_freq)
+
 p = plot(τs_freq, G_2_freq[:, 1, 1], label="freq_11")
 plot!(τs_freq, G_2_freq[:, 1, 2], label="freq_12")
 plot!(τs_freq, G_2_freq[:, 2, 1], label="freq_21")
@@ -600,12 +603,11 @@ plot!(τs_freq, G_2_freq[:, 2, 2], label="freq_22")
 
 xlabel!("\\tau")
 ylabel!("\$G_2\$")
-ylims!(-0.6, 0.6)
 
-pf_minus_matrix, pf_plus_matrix = SREMatrix.pfaffians(Σ_2_matrix, syk_2)
-pf_plus_matrix / (pf_minus_matrix + pf_plus_matrix)
-pf_minus_inv, pf_plus_inv = SREFourier.pfaffians(Σ_2_matrix_inv[2:end, :, :], syk_2)
-pf_plus_inv / (pf_plus_inv + pf_minus_inv)
+# pf_minus_matrix, pf_plus_matrix = SREMatrix.pfaffians(Σ_2_matrix, syk_2)
+# pf_plus_matrix / (pf_minus_matrix + pf_plus_matrix)
+# pf_minus_inv, pf_plus_inv = SREFourier.pfaffians(Σ_2_matrix_inv[2:end, :, :], syk_2)
+# pf_plus_inv / (pf_plus_inv + pf_minus_inv)
 
 display(p)
 

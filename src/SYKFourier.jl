@@ -41,19 +41,21 @@ end
 
 function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=100000)
 	t = 0.5; b = 2; err=0 # Lerp and lerp refinement factors
-	Σ_real = Σ_init
-    IFFT = plan_ifft(Σ_real, 1; flags=FFTW.MEASURE)
-    Σ_freq = syk.β * IFFT * Σ_real
+	Σ_real = copy(Σ_init)
+    # IFFT = plan_ifft(Σ_real, 1; flags=FFTW.MEASURE)
+    # Σ_freq = syk.β * (IFFT * Σ_real)
+    Σ_freq = syk.β * ifft(Σ_real, 1)
 	G_freq = G_SD_freq(Σ_freq, syk)
-    FFT = plan_fft(G_freq, 1; flags=FFTW.MEASURE)
-    G_real = real(FFT * G_freq) / syk.β
+    # FFT = plan_fft(G_freq, 1; flags=FFTW.MEASURE)
+    # G_real = real(FFT * G_freq) / syk.β
+    G_real = real(fft(G_freq, 1)) / syk.β
 	for i=1:max_iters
 		Σ_real = Σ_SD_real(G_real, syk)
-        Σ_freq = syk.β * IFFT * Σ_real
+        Σ_freq = syk.β * ifft(Σ_real, 1)
 		G_freq_new = t * G_SD_freq(Σ_freq, syk) + (1 - t) * G_freq
 		err_new = sum(abs.(G_freq_new - G_freq))
 		if isapprox(err_new, 0; atol=1e-10)
-            G_real = real(FFT * G_freq_new) / syk.β
+            G_real = real(fft(G_freq, 1)) / syk.β
             Σ_real = Σ_SD_real(G_real, syk)
             println("Converged after ", i, " iterations")
             break
@@ -65,7 +67,7 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_
         end
 		err = err_new
 		G_freq = G_freq_new
-        G_real = real(FFT * G_freq) / syk.β
+        G_real = real(fft(G_freq, 1)) / syk.β
         i == max_iters && println("Exceeded iterations!")
 	end
 	return Σ_real, G_real
