@@ -2,6 +2,7 @@ module SREMatrix
 
 using SparseArrays
 using LinearAlgebra
+using Plots
 
 using ..SYK
 using ..SYKMatrix
@@ -57,10 +58,12 @@ function G_SD(Σ, syk::SYKData)
     D_plus = kron(I_rep, differential(L_rep, anti_periodic=false))
     prop_minus = D_minus - Δτ^2 * Σ
 	prop_plus = D_plus - Δτ^2 * Σ
-	pfaff_minus = sqrt(det(prop_minus))
-    det(prop_plus) < 0 && return NaN
-	pfaff_plus = sqrt(det(prop_plus))
-	p_plus = pfaff_plus / (pfaff_minus + pfaff_plus)
+    prop_ratio = prop_minus * inv(prop_plus)
+    det_ratio = det(prop_ratio)
+    det_ratio < 0 && return NaN
+	pfaff_ratio = sqrt(det(prop_ratio))
+    println("pfaff_ratio = ", pfaff_ratio)
+	p_plus = 1 / (1 + pfaff_ratio)
     println(p_plus)
 	return (1 - p_plus) * inv(prop_minus) + p_plus * inv(prop_plus)
 end
@@ -86,12 +89,17 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
     @assert iseven(syk.q)
     @assert iszero(L % syk.M)
 
-	t = 0.8; b = 2; err=0
+	t = 0.1; b = 2; err=0
 	Σ = Σ_init
 	G = G_SD(Σ, syk)
+    p = plot(Gray.(G .- minimum(G)), title="Iteration 0")
+    display(p)
     Σ = Σ_SD(G, syk)
-	for i=1:max_iters
+    i = 1
+	while i <= max_iters
 		G_new = t * G_SD(Σ, syk) + (1 - t) * G
+        p = plot(Gray.(G_new .- minimum(G_new)), title="Iteration $(i)")
+        display(p)
 		err_new = sum(abs.(G_new - G)) / sum(abs.(G))
 		if isapprox(err_new, 0; atol=1e-10)
             G = G_new
@@ -113,8 +121,10 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
 		err = err_new
         println("err = ", err, " t = ", t)
 		G = G_new
+        
         Σ = Σ_new
         i == max_iters && println("Exceeded iterations!")
+        i += 1
 	end
 	return Σ, G
 end

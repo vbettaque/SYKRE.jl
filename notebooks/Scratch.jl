@@ -565,7 +565,7 @@ SREFourier.det_ratio2(J^2 * G_init_freq, syk_2)
 # SREFourier.det_ratio(β * ifft(Σ_init_real, 1), syk_2)
 
 sre_matrix, Σ_2_matrix, G_2_matrix = SREMatrix.logZ(L_matrix, syk_2; Σ_init=Σ_init_matrix, max_iters=1000)
-sre_freq, Σ_2_freq, G_2_freq = SREFourier.logZ(L_freq, syk_2; Σ_init=Σ_init_real, max_iters=100000)
+# sre_freq, Σ_2_freq, G_2_freq = SREFourier.logZ(L_freq, syk_2; Σ_init=Σ_init_real, max_iters=100000)
 
 Δτ_matrix = β / L_matrix
 L_rep_matrix = L_matrix ÷ 2
@@ -592,6 +592,22 @@ ylabel!("\$G_2\$")
 ylims!(-0.6, 0.6)
 
 display(p)
+
+#------------
+
+Δτ_matrix = β / L_matrix
+
+τs, G_2 = time_invariance(G_2_matrix, 2*β)
+
+p = plot(τs, G_2, label="whole matrix")
+
+xlabel!("\\tau")
+ylabel!("\$G_2\$")
+ylims!(-0.6, 0.6)
+
+display(p)
+
+#------------
 
 Δτ_freq = β / L_freq
 τs_freq = LinRange(0, 2*β - Δτ_freq, L_freq)

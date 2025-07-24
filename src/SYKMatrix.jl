@@ -40,7 +40,9 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
 	t = 0.5; b = 2; err=0
 	Σ = Σ_init
 	G = G_SD(Σ, syk)
-	for i=1:max_iters
+    i = 1
+	while i <= max_iters
+        println("Iteration ", i)
 		Σ = Σ_SD(G, syk)
 		G_new = t * G_SD(Σ, syk) + (1 - t) * G
 		err_new = sum(abs.(G_new - G)) / sum(abs.(G))
@@ -55,9 +57,11 @@ function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
             i -= 1
             continue
         end
+        println("error = ", err_new)
 		err = err_new
 		G = G_new
         i == max_iters && println("Exceeded iterations!")
+        i += 1
 	end
 	return Σ, G
 end
@@ -75,7 +79,7 @@ end
 
 function logZ(L, syk::SYKData; Σ_init = zeros(L, L), max_iters=1000)
     Σ, G = schwinger_dyson(L, syk; Σ_init = Σ_init, max_iters=max_iters)
-    return -action(Σ, G, syk), Σ
+    return -action(Σ, G, syk), Σ, G
 end
 
 
