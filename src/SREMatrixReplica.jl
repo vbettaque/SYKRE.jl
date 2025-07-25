@@ -1,63 +1,67 @@
-module SREMatrix
+module SREMatrixReplica
 
+using BlockArrays
 using LinearAlgebra
 using Plots
 
 using ..SYK
 using ..SYKMatrix
 
-# function differential(L; anti_periodic=true)
-# 	rows = repeat(1:L, inner=2)
-# 	values = repeat([-1, 1], L)
-# 	columns = rows + values; columns[1] = L; columns[2*L] = 1
-# 	anti_periodic && (values[1] *= -1; values[2*L] *= -1)
-# 	return SkewHermitian(Matrix(sparse(rows, columns, float.(values))))
-# end
-
-function differential(L; periodic=false)
+function differential(L; M = 1, periodic=false)
     D = Matrix{Float64}(I, L, L)
     for i=1:L-1
         D[i+1, i] = -1
     end
     D[1, L] = periodic ? -1 : 1
-	return D
+    I_M = Matrix{Float64}(I, M, M)
+	return BlockKron(I_M, D)
 end
 
-function pfaffians(Σ, syk::SYKData)
-    @assert iseven(syk.M)
-	L, _ = size(Σ)
-    @assert iszero(L % syk.M)
-    L_rep = L ÷ syk.M
-    @assert iseven(L_rep)
-    Δτ = syk.β/L_rep
-    I_rep = Matrix{Float64}(I, syk.M, syk.M)
-    D_minus = kron(I_rep, differential(L_rep))
-    D_plus = kron(I_rep, differential(L_rep, anti_periodic=false))
-    prop_minus = D_minus - Δτ^2 * Σ
-	prop_plus = D_plus - Δτ^2 * Σ
-    pfaff_minus = sqrt(det(prop_minus))
-	pfaff_plus = det(prop_plus) >= 0 ? sqrt(det(prop_plus)) : NaN
-    return pfaff_minus, pfaff_plus
+function inverse_and_pfaffian(A)
+    Ls = blocksizes(Σ)
+    @assert allequal(Ls)
+    L, L_ = Ls[1, 1]
+    @assert L == L_
+    M, M_ = size(Ls)
+    @assert isinteger(log2(M)) && M == M_
+    M_2 = M ÷ 2
+
+    A_diag = view(A, Block(1:M_2, 1:M_2))
+    @assert blockisequal(A_diag, view(A, Block(1:M_2, 1:M_2)))
+    A_off = view(A, Block(M_2+1:M, 1:M÷2))
+    @assert blockisequal(A_off, -view(A, Block(1:M_2, M_2+1:M)))
+
+	A_inv, pf_A = (M == 2 ? (inv(A), sqrt(det(A))) : inverse_pfaffian(A_diag))
+	
+    schur = A_diag + A_off * A_inv * A_off
+	schur_inv, pf_schur = (M == 2 ? (inv(schur), sqrt(det(schur))) : inverse_pfaffian(schur))
+
+	inv_off_diag = schur_inv * B * A_inv
+	
+	return mortar([[schur_inv inv_off_diag; -inv_off_diag schur_inv]]), pf_A * pf_schur
 end
 
-function p_plus(Σ, syk::SYKData)
-    pf_minus, pf_plus = pfaffians(Σ, syk)
-    return pf_plus / (pf_minus + pf_plus)
-end
 
 
 function G_SD(Σ, syk::SYKData)
-    @assert iseven(syk.M)
-	L, _ = size(Σ)
-    @assert iszero(L % syk.M)
-    L_rep = L ÷ syk.M
-    @assert iseven(L_rep)
-    Δτ = syk.β/L_rep
-    I_rep = Matrix{Float64}(I, syk.M, syk.M)
-	D_minus = kron(I_rep, differential(L_rep))
-    D_plus = kron(I_rep, differential(L_rep, anti_periodic=false))
+    Ls = blocksizes(Σ)
+    @assert allequal(Ls)
+    L, L_ = Ls[1, 1]
+    @assert L == L_
+    M, M_ = size(Ls)
+    @assert iseven(M) && M == M_ == syk.M
+
+    Δτ = syk.β/L
+
+	D_minus = differential(L; M = M, periodic=false)
+    D_plus = differential(L; M = M, periodic=true)
+
     prop_minus = D_minus - Δτ^2 * Σ
 	prop_plus = D_plus - Δτ^2 * Σ
+
+    inv_minus, pf_minus = undef
+    inv
+
     prop_ratio = prop_minus * inv(prop_plus)
     det_ratio = det(prop_ratio)
     det_ratio < 0 && return NaN
