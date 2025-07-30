@@ -64,7 +64,7 @@ function generate_matrix_sre_data(L, M, q, βs)
     end
 
     G_M_init = rand_G_init(L, M)
-    G_2_init = rand_G_init(L, 2)
+    G_2_init = inv(SYKMatrix.differential(2 * L))
     G_Z_init = inv(SYKMatrix.differential(L))
 
     for i in eachindex(βs)
@@ -82,11 +82,13 @@ function generate_matrix_sre_data(L, M, q, βs)
         sre, G_M, G_2, G_Z = SREMatrix.sre(G_M_init, G_2_init, G_Z_init, syk; params_M = (0.5, 2, 1000), params_2 = (0.5, 2, 1000), params_Z = (0.5, 2, 1000))
 
         pf_minus_M, pf_plus_M = SREMatrix.pfaffians(G_M, syk)
-        pf_minus_2, pf_plus_2 = SREMatrix.pfaffians(G_2,  SYKData(syk.N, syk.J, syk.q, 2, syk.β))
+        L_2, _ = size(G_2)
+        G_2_blocked = BlockedArray(G_2, [L_2 ÷ 2, L_2 ÷ 2], [L_2 ÷ 2, L_2 ÷ 2])
+        pf_minus_2, pf_plus_2 = SREMatrix.pfaffians(G_2_blocked,  SYKData(syk.N, syk.J, syk.q, 2, syk.β))
 
-        # G_M_init = 0.8 * G_M + 0.2 * rand_G_init(L, M)
-        # G_2_init = G_2
-        # G_Z_init = G_Z
+        G_M_init = 3/4 * G_M + 1/4 * rand_G_init(L, M)
+        G_2_init = G_2
+        G_Z_init = G_Z
 
         df = DataFrame(β = β, sre = sre, pf_minus_α = pf_minus_M, pf_plus_α = pf_plus_M, pf_minus_1 = pf_minus_2, pf_plus_1 = pf_plus_2)
         CSV.write(file, df, append=true)
@@ -94,17 +96,22 @@ function generate_matrix_sre_data(L, M, q, βs)
 
 end
 
-βs = LinRange(20, 40, 21)
-generate_matrix_sre_data(2000, 4, 6, βs)
+βs = LinRange(1, 30, 30)
+generate_matrix_sre_data(1000, 4, 4, βs)
 
 
-data_2 = CSV.File("data/sre_matrix/sre2_q2_L1000.csv"; select=["β", "sre"]) |> DataFrame
-data_4 = CSV.File("data/sre_matrix/sre2_q4_L1000.csv"; select=["β", "sre"]) |> DataFrame
-data_6 = CSV.File("data/sre_matrix/sre2_q6_L1000.csv"; select=["β", "sre"]) |> DataFrame
+data_2_1000 = CSV.File("data/sre_matrix/sre2_q2_L1000.csv"; select=["β", "sre"]) |> DataFrame
+data_4_1000 = CSV.File("data/sre_matrix/sre2_q4_L1000.csv"; select=["β", "sre"]) |> DataFrame
+data_6_1000 = CSV.File("data/sre_matrix/sre2_q6_L1000.csv"; select=["β", "sre"]) |> DataFrame
 
-p = plot(data_2[:, 1], data_2[:, 2], label="q=2")
-p = plot!(data_4[:, 1], data_4[:, 2], label="q=4")
-p = plot!(data_6[:, 1], data_6[:, 2], label="q=6")
+data_4_2000 = CSV.File("data/sre_matrix/sre2_q4_L2000.csv"; select=["β", "sre"]) |> DataFrame
+data_6_2000 = CSV.File("data/sre_matrix/sre2_q6_L2000.csv"; select=["β", "sre"]) |> DataFrame
+
+p = plot(data_2_1000[:, 1], data_2_1000[:, 2], label="q=2, L = 1000")
+plot!(data_4_1000[:, 1], data_4_1000[:, 2], label="q=4, L = 1000")
+plot!(data_6_1000[:, 1], data_6_1000[:, 2], label="q=6, L = 1000")
+# plot!(data_4_2000[:, 1], data_4_2000[:, 2], label="q=4, L = 2000")
+# plot!(data_6_2000[:, 1], data_6_2000[:, 2], label="q=6, L = 2000")
 
 xlabel!("\$ β \$")
 ylabel!("\$M_2\$")

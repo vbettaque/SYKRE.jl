@@ -65,14 +65,16 @@ end
 
 function G_SD(Σ, syk::SYKData)
     prop_minus, prop_plus = propagtors(Σ, syk)
-    prop_plus_inv = inv(prop_plus)
-    prop_ratio = prop_minus * prop_plus_inv
+    prop_minus_inv = inv(prop_minus)
+    prop_ratio = prop_plus * 
     det_ratio = det(prop_ratio)
     println("det_ratio = ", det_ratio)
+    if det_ratio < 0 && abs(det_ratio) < 1e-15
+        return prop_minus_inv
 	pfaff_ratio = sqrt(abs(det_ratio))
-	p_plus = 1 / (1 + pfaff_ratio)
-    println("p_plus = ", p_plus)
-	return (1 - p_plus) * inv(prop_minus) + p_plus * prop_plus_inv
+	p_minus = 1 / (1 + pfaff_ratio)
+    println("p_minus = ", p_minus)
+	return p_minus * prop_minus_inv + (1 - p_minus) * inv(prop_plus)
 end
 
 
@@ -107,7 +109,7 @@ function schwinger_dyson(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2
             break
         end
 
-		if (err_new > err)
+		if (err_new > err && i > 5)
             println("Relative error increased, trying again...")
             t /= lerp_divisor
             continue
@@ -159,23 +161,23 @@ function sre(G_M_init, G_2_init, G_Z_init, syk::SYKData; params_M = (0.5, 2, 100
     @assert iseven(syk.q)
 
     syk_M = syk
-    syk_2 = SYKData(syk.N, syk.J, syk.q, 2, syk.β)
+    syk_2 = SYKData(syk.N, syk.J, syk.q, 1, 2 * syk.β)
     syk_Z = SYKData(syk.N, syk.J, syk.q, 1, syk.β)
 
-    _, L, _ = block_structure(G_M_init, syk_M)
-    _, L_2, _ = block_structure(G_M_init, syk_M)
-    _, L_Z, _ = block_structure(G_M_init, syk_M)
+    _, L_M, _ = block_structure(G_M_init, syk_M)
+    _, L_2, _ = block_structure(G_2_init, syk_2)
+    _, L_Z, _ = block_structure(G_Z_init, syk_Z)
 
-    @assert L == L_2 == L_Z
+    @assert L_M == L_2 ÷ 2 == L_Z
 
     println("Computing ", syk.M, "-replica SRE saddle.")
     G_M, Σ_M = schwinger_dyson(G_M_init, syk_M; init_lerp = params_M[1], lerp_divisor = params_M[2], max_iters = params_M[3])
     log2_saddle_M = log2_saddle(G_M, Σ_M, syk_M)
     println("log2_saddle = ", log2_saddle_M)
 
-    println("Computing 2-replica SRE saddle.")
-    G_2, Σ_2 = schwinger_dyson(G_2_init, syk_2; init_lerp = params_2[1], lerp_divisor = params_2[2], max_iters = params_2[3])
-    log2_saddle_2 = log2_saddle(G_2, Σ_2, syk_2)
+    println("Computing purity saddle.")
+    G_2, Σ_2 = SYKMatrix.schwinger_dyson(G_2_init, syk_2; init_lerp = params_2[1], lerp_divisor = params_2[2], max_iters = params_2[3])
+    log2_saddle_2 = SYKMatrix.log2Z_saddle(G_2, Σ_2, syk_2) + 0.5
     println("log2_saddle = ", log2_saddle_2)
 
     println("Computing 1-replica SYK saddle.")
