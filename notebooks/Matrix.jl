@@ -121,14 +121,14 @@ end
 
 # display(p)
 
-# N = 1
-# J = 1.
-# q = 4
-# M = 4
-# L = 1500
-# β = 300
+N = 1
+J = 1.
+q = 6
+M = 4
+L = 1000
+β = 5
 
-# syk = SYKData(N, J, q, M, β)
+syk = SYKData(N, J, q, M, β)
 
 # R1 = Matrix{Float64}(I, M, M)
 # R2 = R1[[M; 1:(M-1)], :]; R2[1, M] *= -1
@@ -142,38 +142,86 @@ end
 
 # G_init = blockkron(R1, G1) + blockkron(R2, G2) + blockkron(R3, G3) + blockkron(R4, G4)
 
-# plot(Gray.(G_init .- minimum(G_init)))
+G_init = inv(SREMatrix.differential(M * L; M=1, periodic=false))
+G_init = BlockedMatrix(G_init, repeat([L], M), repeat([L], M))
 
-# G, Σ = SREMatrix.schwinger_dyson(G_init, syk; init_lerp = 0.2)
+plot(Gray.(G_init .- minimum(G_init)))
 
-# plot(Gray.(G .- minimum(G)))
+G, Σ = SREMatrix.schwinger_dyson(G_init, syk; init_lerp = 0.5)
+
+plot(Gray.(G .- minimum(G)))
+
+G
+
+τs = []
+G_blocks = blocks(G)
+G_functions = zeros(2 * L, M, M)
 
 
+p = plot()
+for i=1:M
+    for j=1:M
+        τs, G_functions[:, i, j] = time_invariance(G_blocks[i, j], β)
+        p = plot!(τs, G_functions[:, i, j], label="G_$(i)$(j)")
+    end
+end
 
-# τs = []
-# G_blocks = blocks(G)
-# G_functions = zeros(2 * L, M, M)
+display(p)
 
+#--------------------------------
 
-# p = plot()
-# for i=1:M
-#     for j=1:M
-#         τs, G_functions[:, i, j] = time_invariance(G_blocks[i, j], β)
-#         p = plot!(τs, G_functions[:, i, j], label="G_$(i)$(j)")
-#     end
+# N = 1
+# L = 1000
+# J = 1
+# q = 2
+# M = 1
+
+# βs = LinRange(0.1, 30, 31)
+# Fs = zeros(length(βs))
+
+# G_init = inv(SREMatrix.differential(L))
+# for i = eachindex(βs)
+#     syk = SYKData(N, J, q, M, βs[i])
+#     G, Σ = SYKMatrix.schwinger_dyson(G_init, syk; init_lerp = 0.5, lerp_divisor = 2, max_iters=1000)
+#     Fs[i] = SYKMatrix.free_energy_saddle(G, Σ, syk)
+#     G_init = G
 # end
+
+# p = plot(βs, Fs)
+# plot!(βs, SYK.free_energy_q2.(βs, J; N=1))
+
+# xaxis!("β")
+# yaxis!("F")
 
 # display(p)
 
+#--------------------------------
+
 N = 1
 L = 1000
-β = 40
 J = 1
 q = 4
-M = 4
+M = 1
 
-syk = SYKData(N, J, q, M, β)
+βs = LinRange(1, 10, 10)
+purity_syk = zeros(length(βs))
+purity_sre = zeros(length(βs))
 
+G_init_syk = inv(SREMatrix.differential(L))
+G_init_sre = BlockedArray(G_init_syk, [L÷2, L÷2], [L÷2, L÷2])
 
-G_init = rand_G_init(L, M)
-SREMatrix.schwinger_dyson(G_init, syk; init_lerp = 0.5, lerp_divisor = 2, max_iters=1000)
+for i = eachindex(βs)
+    syk = SYKData(N, J, q, M, βs[i])
+    sre = SYKData(N, J, q, 2, βs[i])
+    purity_syk[i] = SYKMatrix.log2_purity_saddle(G_init_syk, syk; init_lerp = 0.5, lerp_divisor = 2, max_iters=1000)
+    G_sre, Σ_sre = SREMatrix.schwinger_dyson(G_init_sre, sre; init_lerp = 0.1, lerp_divisor = 20, max_iters=1000)
+    purity_sre[i] = SREMatrix.log2_saddle(G_sre, Σ_sre, sre)
+end
+
+p = plot(βs, purity_syk)
+plot!(βs, purity_sre .- 0.5)
+
+xaxis!("β")
+yaxis!("log(purity)")
+
+display(p)

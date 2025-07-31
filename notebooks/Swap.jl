@@ -81,7 +81,8 @@ function generate_swap_data(L, M, q, β, ws)
     logZ = SYKMatrix.log2Z_saddle(G_Z, Σ_Z, syk_Z)
 
     syk = SYKData(N, J, q, M, β)
-    G_init = inv(SwapMatrix.differential(L; M=M))
+    G_init = inv(SYKMatrix.differential(M * L))
+    G_init = BlockedArray(G_init, repeat([L], M), repeat([L], M))
 
     for i in eachindex(ws)
         w = ws[i]
@@ -91,17 +92,22 @@ function generate_swap_data(L, M, q, β, ws)
         pf_minus = 0
         pf_plus = 0
 
-        G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.2, lerp_divisor = 2, max_iters=1000)
+        t = isone(i) ? 0.05 : 0.0001
+
+        G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = t, lerp_divisor = 10, max_iters=1000)
 
         p = plot(Gray.(G .- minimum(G)), title="β = $(β), w = $(w)")
         display(p)
+        display(G)
 
         log_swap = SwapMatrix.log2_trace_swap(G, Σ, w, syk) - M * logZ
         pf_minus, pf_plus = SwapMatrix.pfaffians(Σ, syk)
 
         println("log_swap = ", SwapMatrix.log2_trace_swap(G, Σ, w, syk))
 
-        G_init = rand_G_init(L, M)
+        G_init = G
+        # G_init += blockkron([0 -1; 1 0], rand_time_invariant(2 * L; periodic = true))
+        # G_init = BlockedArray(G_init, repeat([L], M), repeat([L], M))
 
         df = DataFrame(weight = w, log_swap = log_swap, pf_minus = pf_minus, pf_plus = pf_plus)
         CSV.write(file, df, append=true)
@@ -117,11 +123,12 @@ ws = LinRange(0, 1, 21)
 
 generate_swap_data(L, M, q, β, ws)
 
-data = CSV.File("data/swap_matrix/swap2_q4_L1000_beta50.csv") |> DataFrame
+data = CSV.File("data/swap_matrix/swap2_q4_L1000_beta10.csv") |> DataFrame
 
 entropy = binary_entropy2(ws)
 entropy
-p = plot(data, data + entropy, label="q=4, L = 1000, β = 50")
+p = plot(data[:,1], data[:,2], label="q=4, L = 1000, β = 10")
+plot!(data[:,1], data[:,2] + entropy, label="saddle + entropy")
 
 xlabel!("\$ w \$")
 ylabel!("\$\\log(saddle)\$")

@@ -120,7 +120,7 @@ free_energy_saddle(G, Σ, syk::SYKData) = -logZ_saddle(G, Σ, syk) / syk.β
 function log_purity_saddle(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2, max_iters=1000)
     syk_2β = SYKData(syk.N, syk.J, syk.q, syk.M, 2*syk.β)
     G, Σ = schwinger_dyson(G_init, syk_2β; init_lerp = init_lerp, lerp_divisor = lerp_divisor, max_iters = max_iters)
-    return log_saddle(G, Σ, syk_2β)
+    return logZ_saddle(G, Σ, syk_2β)
 end
 
 function log2_purity_saddle(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2, max_iters=1000)
