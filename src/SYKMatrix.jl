@@ -39,7 +39,7 @@ end
 
 function G_SD(Σ, syk::SYKData)
 	prop = propagtor(Σ, syk)
-    return inv(prop)
+    return -inv(prop)'
 end
 
 

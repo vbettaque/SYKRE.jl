@@ -80,13 +80,16 @@ function generate_matrix_sre_data(L, M, q, βs)
         pf_plus_2 = 0
 
         sre, G_M, G_2, G_Z = SREMatrix.sre(G_M_init, G_2_init, G_Z_init, syk; params_M = (0.5, 2, 1000), params_2 = (0.5, 2, 1000), params_Z = (0.5, 2, 1000))
+        Σ_M = SREMatrix.Σ_SD(G_M, syk)
+        pf_minus_M, pf_plus_M = SREMatrix.pfaffians(Σ_M, syk)
 
-        pf_minus_M, pf_plus_M = SREMatrix.pfaffians(G_M, syk)
         L_2, _ = size(G_2)
+        syk2 = SYKData(syk.N, syk.J, syk.q, 2, syk.β)
         G_2_blocked = BlockedArray(G_2, [L_2 ÷ 2, L_2 ÷ 2], [L_2 ÷ 2, L_2 ÷ 2])
-        pf_minus_2, pf_plus_2 = SREMatrix.pfaffians(G_2_blocked,  SYKData(syk.N, syk.J, syk.q, 2, syk.β))
+        Σ_2_blocked = SREMatrix.Σ_SD(G_2_blocked, syk2)
+        pf_minus_2, pf_plus_2 = SREMatrix.pfaffians(Σ_2_blocked, syk2)
 
-        G_M_init = 3/4 * G_M + 1/4 * rand_G_init(L, M)
+        # G_M_init = 3/4 * G_M + 1/4 * rand_G_init(L, M)
         G_2_init = G_2
         G_Z_init = G_Z
 
@@ -96,27 +99,27 @@ function generate_matrix_sre_data(L, M, q, βs)
 
 end
 
-βs = LinRange(1, 30, 30)
-generate_matrix_sre_data(1000, 4, 4, βs)
+# βs = LinRange(1, 30, 30)
+# generate_matrix_sre_data(1000, 4, 4, βs)
 
 
-data_2_1000 = CSV.File("data/sre_matrix/sre2_q2_L1000.csv"; select=["β", "sre"]) |> DataFrame
-data_4_1000 = CSV.File("data/sre_matrix/sre2_q4_L1000.csv"; select=["β", "sre"]) |> DataFrame
-data_6_1000 = CSV.File("data/sre_matrix/sre2_q6_L1000.csv"; select=["β", "sre"]) |> DataFrame
+# data_2_1000 = CSV.File("data/sre_matrix/sre2_q2_L1000.csv"; select=["β", "sre"]) |> DataFrame
+# data_4_1000 = CSV.File("data/sre_matrix/sre2_q4_L1000.csv"; select=["β", "sre"]) |> DataFrame
+# data_6_1000 = CSV.File("data/sre_matrix/sre2_q6_L1000.csv"; select=["β", "sre"]) |> DataFrame
 
-data_4_2000 = CSV.File("data/sre_matrix/sre2_q4_L2000.csv"; select=["β", "sre"]) |> DataFrame
-data_6_2000 = CSV.File("data/sre_matrix/sre2_q6_L2000.csv"; select=["β", "sre"]) |> DataFrame
+# data_4_2000 = CSV.File("data/sre_matrix/sre2_q4_L2000.csv"; select=["β", "sre"]) |> DataFrame
+# data_6_2000 = CSV.File("data/sre_matrix/sre2_q6_L2000.csv"; select=["β", "sre"]) |> DataFrame
 
-p = plot(data_2_1000[:, 1], data_2_1000[:, 2], label="q=2, L = 1000")
-plot!(data_4_1000[:, 1], data_4_1000[:, 2], label="q=4, L = 1000")
-plot!(data_6_1000[:, 1], data_6_1000[:, 2], label="q=6, L = 1000")
+# p = plot(data_2_1000[:, 1], data_2_1000[:, 2], label="q=2, L = 1000")
+# plot!(data_4_1000[:, 1], data_4_1000[:, 2], label="q=4, L = 1000")
+# plot!(data_6_1000[:, 1], data_6_1000[:, 2], label="q=6, L = 1000")
 # plot!(data_4_2000[:, 1], data_4_2000[:, 2], label="q=4, L = 2000")
 # plot!(data_6_2000[:, 1], data_6_2000[:, 2], label="q=6, L = 2000")
 
-xlabel!("\$ β \$")
-ylabel!("\$M_2\$")
+# xlabel!("\$ β \$")
+# ylabel!("\$M_2\$")
 
-display(p)
+# display(p)
 
 # N = 1
 # J = 1.
@@ -161,3 +164,16 @@ display(p)
 # end
 
 # display(p)
+
+N = 1
+L = 1000
+β = 40
+J = 1
+q = 4
+M = 4
+
+syk = SYKData(N, J, q, M, β)
+
+
+G_init = rand_G_init(L, M)
+SREMatrix.schwinger_dyson(G_init, syk; init_lerp = 0.5, lerp_divisor = 2, max_iters=1000)

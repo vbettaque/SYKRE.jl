@@ -66,12 +66,10 @@ end
 function G_SD(Σ, syk::SYKData)
     prop_minus, prop_plus = propagtors(Σ, syk)
     prop_minus_inv = inv(prop_minus)
-    prop_ratio = prop_plus * 
+    prop_ratio = prop_plus * prop_minus_inv
     det_ratio = det(prop_ratio)
     println("det_ratio = ", det_ratio)
-    if det_ratio < 0 && abs(det_ratio) < 1e-15
-        return prop_minus_inv
-	pfaff_ratio = sqrt(abs(det_ratio))
+	pfaff_ratio = sqrt(det_ratio)
 	p_minus = 1 / (1 + pfaff_ratio)
     println("p_minus = ", p_minus)
 	return p_minus * prop_minus_inv + (1 - p_minus) * inv(prop_plus)
@@ -109,7 +107,7 @@ function schwinger_dyson(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2
             break
         end
 
-		if (err_new > err && i > 5)
+		if (err_new > err)
             println("Relative error increased, trying again...")
             t /= lerp_divisor
             continue

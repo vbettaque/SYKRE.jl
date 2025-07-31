@@ -7,5 +7,6 @@ include("SREMatrix.jl")
 include("Replicas.jl")
 include("SYKFourier.jl")
 include("SREFourier.jl")
+include("SwapMatrix.jl")
 
 end
