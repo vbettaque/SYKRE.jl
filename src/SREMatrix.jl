@@ -19,6 +19,14 @@ using ..SYKMatrix
 #     return τs, M_invariant
 # end
 
+function plot_matrix(M; title="")
+    M_max = maximum(M)
+    M_min = minimum(M)
+    M_gray = Gray.((M .- M_min) / (M_max - M_min) )
+    p = plot(M_gray, title=title)
+    display(p)
+end
+
 
 function block_structure(A, syk::SYKData)
     Ls = blocksizes(A)
@@ -72,7 +80,13 @@ function G_SD(Σ, syk::SYKData)
 	pfaff_ratio = sqrt(det_ratio)
 	p_minus = 1 / (1 + pfaff_ratio)
     println("p_minus = ", p_minus)
-	return p_minus * prop_minus_inv + (1 - p_minus) * -inv(prop_plus)'
+    if iszero(p_minus)
+        return -inv(prop_plus)'
+    elseif isone(p_minus)
+        return prop_minus_inv
+    else
+        return p_minus * prop_minus_inv + (1 - p_minus) * -inv(prop_plus)'
+    end
 end
 
 
@@ -119,8 +133,7 @@ function schwinger_dyson(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2
 		G = G_lerp
         Σ = Σ_SD(G, syk)
 
-        p = plot(Gray.(G .- minimum(G)), title="Iteration $(i)")
-        display(p)
+        plot_matrix(G; title="Iteration $(i)")
 
         i += 1
 
@@ -132,8 +145,7 @@ function schwinger_dyson(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2
         println("Iteration ", i)
         G_new = G_SD(Σ, syk)
 	end
-    p = plot(Gray.(G .+ 0.5), title="β = $(syk.β)")
-    display(p)
+    plot_matrix(G; title="β = $(syk.β)")
 	return G, Σ
 end
 

@@ -8,6 +8,15 @@ using ..SYK
 using ..SYKMatrix
 
 
+function plot_matrix(M; title="")
+    M_max = maximum(M)
+    M_min = minimum(M)
+    M_gray = Gray.((M .- M_min) / (M_max - M_min) )
+    p = plot(M_gray, title=title)
+    display(p)
+end
+
+
 function block_structure(A, syk::SYKData)
     Ls = blocksizes(A)
     @assert allequal(Ls)
@@ -106,8 +115,7 @@ function schwinger_dyson(G_init, w, syk::SYKData; init_lerp = 0.5, lerp_divisor 
 		G = G_lerp
         Σ = Σ_SD(G, syk)
 
-        p = plot(Gray.(G .- minimum(G)), title="Iteration $(i)")
-        display(p)
+        plot_matrix(G; title="Iteration $(i)")
 
         i += 1
 

@@ -8,6 +8,16 @@ using SYKRE.SYKFourier
 using SYKRE.SREFourier
 using SYKRE.SwapMatrix
 
+
+function plot_matrix(M; title="")
+    M_max = maximum(M)
+    M_min = minimum(M)
+    M_gray = Gray.((M .- M_min) / (M_max - M_min) )
+    p = plot(M_gray, title=title)
+    display(p)
+end
+
+
 function rand_time_invariant(L; periodic=false)
     A = zeros(L, L)
     rands = rand(Float64, L-1) / 4 .+ 0.25
@@ -92,12 +102,9 @@ function generate_swap_data(L, M, q, β, ws)
         pf_minus = 0
         pf_plus = 0
 
-        t = isone(i) ? 0.05 : 0.0001
+        G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.1, lerp_divisor = 10, max_iters=1000)
 
-        G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = t, lerp_divisor = 10, max_iters=1000)
-
-        p = plot(Gray.(G .- minimum(G)), title="β = $(β), w = $(w)")
-        display(p)
+        plot_matrix(G; title="β = $(β), w = $(w)")
         display(G)
 
         log_swap = SwapMatrix.log2_trace_swap(G, Σ, w, syk) - M * logZ
@@ -105,7 +112,7 @@ function generate_swap_data(L, M, q, β, ws)
 
         println("log_swap = ", SwapMatrix.log2_trace_swap(G, Σ, w, syk))
 
-        G_init = G
+        # G_init = G
         # G_init += blockkron([0 -1; 1 0], rand_time_invariant(2 * L; periodic = true))
         # G_init = BlockedArray(G_init, repeat([L], M), repeat([L], M))
 
@@ -123,16 +130,14 @@ ws = LinRange(0, 1, 21)
 
 generate_swap_data(L, M, q, β, ws)
 
-data = CSV.File("data/swap_matrix/swap2_q4_L1000_beta10.csv") |> DataFrame
+data = CSV.File("data/swap_matrix/swap2_q4_L1000_beta50.csv") |> DataFrame
 
 entropy = binary_entropy2(ws)
 entropy
-p = plot(data[:,1], data[:,2], label="q=4, L = 1000, β = 10")
+p = plot(data[:,1], data[:,2], label="q=4, L = 1000, β = 50")
 plot!(data[:,1], data[:,2] + entropy, label="saddle + entropy")
 
 xlabel!("\$ w \$")
 ylabel!("\$\\log(saddle)\$")
 
 display(p)
-
-G = rand_G_init(5, 2)
