@@ -114,7 +114,7 @@ function schwinger_dyson(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2
 		G_lerp = t * G_new + (1 - t) * G
 
 		err_new = sum(abs.(G_lerp - G)) / sum(abs.(G))
-		if isapprox(err_new, 0; atol=1e-10)
+		if isapprox(err_new, 0; atol=1e-5)
             G = G_lerp
             Σ = Σ_SD(G, syk)
             println("Converged after ", i, " iterations")
@@ -122,13 +122,13 @@ function schwinger_dyson(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2
         end
 
 		if (err_new > err)
-            println("Relative error increased, trying again...")
+            println("Relative error increased to $(err_new), trying again...")
             t /= lerp_divisor
             continue
         end
 
         err = err_new
-        println("err = ", err, ", t = ", t)      
+        println("err = ", err, ", t = ", t)
 
 		G = G_lerp
         Σ = Σ_SD(G, syk)
@@ -148,6 +148,85 @@ function schwinger_dyson(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2
     plot_matrix(G; title="β = $(syk.β)")
 	return G, Σ
 end
+
+# function schwinger_dyson(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2, max_iters=1000)
+#     @assert iseven(syk.M)
+#     @assert iseven(syk.q)
+
+#     M, L, Δτ = block_structure(G_init, syk)
+
+#     t = init_lerp
+
+#     D_plus = differential(L; M = M, periodic = true)
+#     D_minus = differential(L; M = M, periodic = false)
+
+#     G = G_init
+#     G_plus = G_init
+#     G_minus = G_init
+# 	Σ = Σ_SD(G, syk)
+
+#     i = 1
+#     println("Iteration ", i)
+
+#     G_plus_new = -inv(D_plus - Δτ^2 * Σ)'
+#     G_minus_new = -inv(D_minus - Δτ^2 * Σ)'
+
+#     err_plus = sum(abs.(G_plus_new - G_plus)) / sum(abs.(G_plus))
+#     err_minus = sum(abs.(G_minus_new - G_minus)) / sum(abs.(G_minus))
+
+# 	while i <= max_iters
+# 		G_plus_lerp = t * G_plus_new + (1 - t) * G_plus
+#         G_minus_lerp = t * G_minus_new + (1 - t) * G_minus
+
+#         err_plus_new = sum(abs.(G_plus_lerp - G_plus)) / sum(abs.(G_plus))
+#         err_minus_new = sum(abs.(G_minus_lerp - G_minus)) / sum(abs.(G_minus))
+
+#         pf_ratio = sqrt(det(-G_plus_lerp * inv(G_minus_lerp)'))
+#         p_plus = 1 / (1 + pf_ratio)
+#         p_minus = 1 - p_plus
+
+#         err_new = p_plus * err_plus_new + p_minus * err_minus_new
+
+# 		if isapprox(err_new, 0; atol=1e-5)
+#             G = p_plus * G_plus_lerp + p_minus * G_minus_lerp
+#             Σ = Σ_SD(G, syk)
+#             println("Converged after ", i, " iterations")
+#             break
+#         end
+
+# 		if (err_plus_new > err_plus || err_minus_new > err_minus)
+#             println("Relative error increased to $(err_plus_new), trying again...")
+#             t /= lerp_divisor
+#             continue
+#         end
+
+#         err_plus = err_plus_new
+#         err_minus = err_minus_new
+#         println("err_new = ", err_new, ", t = ", t)
+
+# 		G_plus = G_plus_lerp
+#         G_minus = G_minus_lerp
+
+#         G = p_plus * G_plus + p_minus * G_minus
+#         Σ = Σ_SD(G, syk)
+
+#         println("p_plus = ", p_plus)
+#         plot_matrix(G; title="Iteration $(i)")
+
+#         i += 1
+
+#         if i > max_iters
+#             println("Exceeded iterations!")
+#             break
+#         end
+
+#         println("Iteration ", i)
+#         G_plus_new = -inv(D_plus - Δτ^2 * Σ)'
+#         G_minus_new = -inv(D_minus - Δτ^2 * Σ)'
+# 	end
+#     plot_matrix(G; title="β = $(syk.β)")
+# 	return G, Σ
+# end
 
 
 function action(G, Σ, syk::SYKData)
@@ -197,7 +276,7 @@ function sre(G_M_init, G_2_init, G_Z_init, syk::SYKData; params_M = (0.5, 2, 100
 
     sre = (log2_saddle_M - log2_saddle_2) / (1 - syk.M ÷ 2) + 2 * log2_saddle_Z
     println("sre = ", sre)
-    
+
     return sre, G_M, G_2, G_Z
 end
 

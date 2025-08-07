@@ -82,21 +82,21 @@ function generate_matrix_sre_data(L, M, q, βs)
         pf_minus_2 = 0
         pf_plus_2 = 0
 
-        t_M = isone(i) ? 0.75 : 0.75
+        t = isone(i) ? 0.1 : 0.1
 
-        sre, G_M, G_2, G_Z = SREMatrix.sre(G_M_init, G_2_init, G_Z_init, syk; params_M = (t_M, 2, 1000), params_2 = (0.5, 2, 1000), params_Z = (0.5, 2, 1000))
+        sre, G_M, G_2, G_Z = SREMatrix.sre(G_M_init, G_2_init, G_Z_init, syk; params_M = (t, 10, 1000), params_2 = (t, 10, 1000), params_Z = (t, 10, 1000))
         Σ_M = SREMatrix.Σ_SD(G_M, syk)
         pf_minus_M, pf_plus_M = SREMatrix.pfaffians(Σ_M, syk)
 
         L_2, _ = size(G_2)
-        syk2 = SYKData(syk.N, syk.J, syk.q, 2, syk.β)
+        syk2 = SYKData(syk.N, syk.J, syk.q, 2, 2*syk.β)
         G_2_blocked = BlockedArray(G_2, [L_2 ÷ 2, L_2 ÷ 2], [L_2 ÷ 2, L_2 ÷ 2])
         Σ_2_blocked = SREMatrix.Σ_SD(G_2_blocked, syk2)
         pf_minus_2, pf_plus_2 = SREMatrix.pfaffians(Σ_2_blocked, syk2)
 
-        G_M_init = 0.99 * G_M + 0.01 * G_M_0
-        G_2_init = G_2
-        G_Z_init = G_Z
+        # G_M_init = 1 * G_M + 0 * G_M_0
+        # G_2_init = G_2
+        # G_Z_init = G_Z
 
         df = DataFrame(β = β, sre = sre, pf_minus_α = pf_minus_M, pf_plus_α = pf_plus_M, pf_minus_1 = pf_minus_2, pf_plus_1 = pf_plus_2)
         CSV.write(file, df, append=true)
@@ -104,8 +104,9 @@ function generate_matrix_sre_data(L, M, q, βs)
 
 end
 
-βs = LinRange(16.8, 30, 133)
-generate_matrix_sre_data(1000, 4, 2, βs)
+βs = LinRange(1, 30, 30)
+# βs = [5.]
+generate_matrix_sre_data(1000, 4, 4, βs)
 
 
 # data_2_1000 = CSV.File("data/sre_matrix/sre2_q2_L1000.csv"; select=["β", "sre"]) |> DataFrame
@@ -172,7 +173,7 @@ syk = SYKData(N, J, q, M, β)
 #     end
 # end
 
-display(p)
+# display(p)
 
 #--------------------------------
 
