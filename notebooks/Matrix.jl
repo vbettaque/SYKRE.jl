@@ -63,12 +63,12 @@ function generate_matrix_sre_data(L, M, q, βs)
         write(file, "β,sre,pf_minus_α,pf_plus_α,pf_minus_1,pf_plus_1\n")
     end
 
-    G_M_0 = inv(SYKMatrix.differential(M * L))
+    G_M_0 = -inv(SYKMatrix.differential(M * L))'
     G_M_0 = BlockedArray(G_M_0, repeat([L], M), repeat([L], M))
     G_M_init = G_M_0
     G_M_init = BlockedArray(G_M_init, repeat([L], M), repeat([L], M))
-    G_2_init = inv(SYKMatrix.differential(2 * L))
-    G_Z_init = inv(SYKMatrix.differential(L))
+    G_2_init = -inv(SYKMatrix.differential(2 * L))'
+    G_Z_init = -inv(SYKMatrix.differential(L))'
 
     for i in eachindex(βs)
         β = βs[i]
@@ -82,7 +82,7 @@ function generate_matrix_sre_data(L, M, q, βs)
         pf_minus_2 = 0
         pf_plus_2 = 0
 
-        t = isone(i) ? 0.1 : 0.1
+        t = 0.05
 
         sre, G_M, G_2, G_Z = SREMatrix.sre(G_M_init, G_2_init, G_Z_init, syk; params_M = (t, 10, 1000), params_2 = (t, 10, 1000), params_Z = (t, 10, 1000))
         Σ_M = SREMatrix.Σ_SD(G_M, syk)
@@ -94,7 +94,7 @@ function generate_matrix_sre_data(L, M, q, βs)
         Σ_2_blocked = SREMatrix.Σ_SD(G_2_blocked, syk2)
         pf_minus_2, pf_plus_2 = SREMatrix.pfaffians(Σ_2_blocked, syk2)
 
-        # G_M_init = 1 * G_M + 0 * G_M_0
+        # G_M_init = 0.5 * G_M + 0.5 * G_M_0
         # G_2_init = G_2
         # G_Z_init = G_Z
 
@@ -104,8 +104,8 @@ function generate_matrix_sre_data(L, M, q, βs)
 
 end
 
-βs = LinRange(1, 30, 30)
-# βs = [5.]
+# βs = LinRange(1, 30, 30)
+βs = collect(5:10)
 generate_matrix_sre_data(1000, 4, 4, βs)
 
 
@@ -117,7 +117,7 @@ generate_matrix_sre_data(1000, 4, 4, βs)
 # data_6_2000 = CSV.File("data/sre_matrix/sre2_q6_L2000.csv"; select=["β", "sre"]) |> DataFrame
 
 # p = plot(data_2_1000[:, 1], data_2_1000[:, 2], label="q=2, L = 1000")
-# plot!(data_4_1000[:, 1], data_4_1000[:, 2], label="q=4, L = 1000, old")
+# p = plot!(data_4_1000[:, 1], data_4_1000[:, 2], label="q=4, L = 1000")
 # plot!(data_6_1000[:, 1], data_6_1000[:, 2], label="q=6, L = 1000")
 # plot!(data_4_2000[:, 1], data_4_2000[:, 2], label="q=4, L = 2000")
 # plot!(data_6_2000[:, 1], data_6_2000[:, 2], label="q=6, L = 2000")
@@ -129,14 +129,14 @@ generate_matrix_sre_data(1000, 4, 4, βs)
 
 # display(p)
 
-N = 1
-J = 1.
-q = 6
-M = 4
-L = 1000
-β = 5
+# N = 1
+# J = 1.
+# q = 6
+# M = 4
+# L = 1000
+# β = 5
 
-syk = SYKData(N, J, q, M, β)
+# syk = SYKData(N, J, q, M, β)
 
 # R1 = Matrix{Float64}(I, M, M)
 # R2 = R1[[M; 1:(M-1)], :]; R2[1, M] *= -1

@@ -86,12 +86,12 @@ function generate_swap_data(L, M, q, β, ws)
     end
 
     syk_Z = SYKData(N, J, q, 1, β)
-    G_Z_init = inv(SYKMatrix.differential(L))
+    G_Z_init = -inv(SYKMatrix.differential(L))'
     G_Z, Σ_Z = SYKMatrix.schwinger_dyson(G_Z_init, syk_Z; init_lerp = 0.5, lerp_divisor = 2, max_iters=1000)
     logZ = SYKMatrix.log2Z_saddle(G_Z, Σ_Z, syk_Z)
 
     syk = SYKData(N, J, q, M, β)
-    G_init = inv(SYKMatrix.differential(M * L))
+    G_init = -inv(SYKMatrix.differential(M * L))'
     G_init = BlockedArray(G_init, repeat([L], M), repeat([L], M))
 
     for i in eachindex(ws)
@@ -128,7 +128,7 @@ q = 4
 β = 50
 ws = LinRange(0, 1, 21)
 
-generate_swap_data(L, M, q, β, ws)
+# generate_swap_data(L, M, q, β, ws)
 
 data = CSV.File("data/swap_matrix/swap2_q4_L1000_beta50.csv") |> DataFrame
 
@@ -141,3 +141,12 @@ xlabel!("\$ w \$")
 ylabel!("\$\\log(saddle)\$")
 
 display(p)
+
+data = CSV.File("data/swap_matrix/swap2_q4_L1000_beta10.csv") |> DataFrame
+
+p = plot(data[:,1], data[:,4] ./ (data[:,3] + data[:,4]) - data[:,1], label="\$p_+ - w\$")
+vline!([0.01875])
+
+xlabel!("\$ w \$")
+
+title!("\$\\beta = 10\$")

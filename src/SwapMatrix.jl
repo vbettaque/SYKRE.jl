@@ -66,7 +66,7 @@ function G_SD(Σ, w, syk::SYKData)
     elseif isone(w)
         return -inv(prop_plus)'
     else
-        return - (w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
+        return -(w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
     end
 end
 
@@ -96,7 +96,7 @@ function schwinger_dyson(G_init, w, syk::SYKData; init_lerp = 0.5, lerp_divisor 
 		G_lerp = t * G_new + (1 - t) * G
 
 		err_new = sum(abs.(G_lerp - G)) / sum(abs.(G))
-		if isapprox(err_new, 0; atol=1e-10)
+		if isapprox(err_new, 0; atol=1e-5)
             G = G_lerp
             Σ = Σ_SD(G, syk)
             println("Converged after ", i, " iterations")
@@ -139,9 +139,9 @@ function action(G, Σ, w, syk::SYKData)
     prop_term = if iszero(w)
         -log(pfaff_minus)
     elseif isone(w)
-         -log(pfaff_plus)
+        -log(pfaff_plus)
     else
-        -w * log(pfaff_plus) - (1 - w) * log(pfaff_minus)
+        -(w * log(pfaff_plus) + (1 - w) * log(pfaff_minus))
     end
     on_shell_term = 1/2 * syk.J^2 * (1 - 1/syk.q) * Δτ^2 * sum(G.^syk.q)
 
