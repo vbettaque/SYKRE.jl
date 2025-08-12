@@ -65,7 +65,7 @@ if !isfile(file)
     write(file, "β,weight\n")
 end
 
-βs = Float64.(10:30)
+βs = Float64.(20:30)
 ws = zeros(length(βs))
 
 for i in eachindex(βs)
