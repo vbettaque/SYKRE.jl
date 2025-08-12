@@ -145,8 +145,17 @@ display(p)
 data = CSV.File("data/swap_matrix/swap2_q4_L1000_beta10.csv") |> DataFrame
 
 p = plot(data[:,1], data[:,4] ./ (data[:,3] + data[:,4]) - data[:,1], label="\$p_+ - w\$")
-vline!([0.01875])
+vline!([0.01654052734375])
 
 xlabel!("\$ w \$")
 
 title!("\$\\beta = 10\$")
+
+data = CSV.File("data/swap_matrix/swap2_q4_L1000_beta50.csv") |> DataFrame
+
+p = plot(data[:,1], data[:,4] ./ (data[:,3] + data[:,4]) - data[:,1], label="\$p_+ - w\$")
+vline!([0.45452880859375])
+
+xlabel!("\$ w \$")
+
+title!("\$\\beta = 50\$")

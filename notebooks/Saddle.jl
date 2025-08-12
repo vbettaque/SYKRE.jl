@@ -8,7 +8,7 @@ using SYKRE.SYKFourier
 using SYKRE.SREFourier
 using SYKRE.SwapMatrix
 
-function bisection(f, a, b; tol=0.001, max_iter=100)
+function bisection(f, a, b; tol=0.0001, max_iter=100)
     @assert a < b
     fa = f(a)
     fb = f(b)
@@ -16,11 +16,15 @@ function bisection(f, a, b; tol=0.001, max_iter=100)
 
     i = 1
     while i ≤ max_iter
+        println("a = ", a, ", b = ", b)
+        println("f(a) = ", fa, ", f(b) = ", fb)
         c = (a + b) / 2
+        println("c = ", c)
         if (b - a) / 2 < tol
             return c
         end
         fc = f(c)
+        println("f(c) = ", fc)
         if iszero(fc)
             return c
         end
@@ -39,21 +43,41 @@ end
 function weight_difference(w, L, syk::SYKData)
     G_init = inv(SYKMatrix.differential(syk.M * L))
     G_init = BlockedArray(G_init, repeat([L], syk.M), repeat([L], syk.M))
-    G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.1, lerp_divisor = 10, max_iters=1000)
+    G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.5, lerp_divisor = 2, max_iters=10000)
     pf_minus, pf_plus = SwapMatrix.pfaffians(Σ, syk)
     p_plus = pf_plus / (pf_plus + pf_minus)
     return p_plus - w
 end
 
+
 N = 1
 J = 1
-q = 4
+q = 2
 M = 4
-β = 10
-L = 1000
+L = 500
 
-syk = SYKData(N, J, q, M, β)
+path = "data/sre_weights/"
+filename = "weights_M" * string(M) * "_q" * string(q) * "_L" * string(L) * ".csv"
+file = path * filename
+!ispath(path) && mkdir(path)
+if !isfile(file)
+    touch(file)
+    write(file, "β,weight\n")
+end
 
-f(w) = weight_difference(w, L, syk)
+βs = Float64.(10:30)
+ws = zeros(length(βs))
 
-bisection(f, 0, 0.1)
+for i in eachindex(βs)
+    β = βs[i]
+    println(i, " out of ", length(ws), ": β = ", β)
+
+    syk = SYKData(N, J, q, M, β)
+    f(w) = weight_difference(w, L, syk)
+
+    w = bisection(f, 0.00, 0.5)
+
+    df = DataFrame(β = β, weight = w)
+    CSV.write(file, df, append=true)
+end
+# 0.1 -> ~0

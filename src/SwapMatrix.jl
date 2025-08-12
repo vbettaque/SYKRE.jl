@@ -110,12 +110,10 @@ function schwinger_dyson(G_init, w, syk::SYKData; init_lerp = 0.5, lerp_divisor 
         end
 
         err = err_new
-        println("err = ", err, ", t = ", t)      
+        println("err = ", err, ", t = ", t)
 
 		G = G_lerp
         Σ = Σ_SD(G, syk)
-
-        plot_matrix(G; title="Iteration $(i)")
 
         i += 1
 
@@ -127,6 +125,8 @@ function schwinger_dyson(G_init, w, syk::SYKData; init_lerp = 0.5, lerp_divisor 
         println("Iteration ", i)
         G_new = G_SD(Σ, w, syk)
 	end
+
+    plot_matrix(G; title="w = $(w), β = $(syk.β)")
 
 	return G, Σ
 end

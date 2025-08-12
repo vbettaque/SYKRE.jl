@@ -89,7 +89,7 @@ function generate_matrix_sre_data(L, M, q, βs)
         pf_minus_M, pf_plus_M = SREMatrix.pfaffians(Σ_M, syk)
 
         L_2, _ = size(G_2)
-        syk2 = SYKData(syk.N, syk.J, syk.q, 2, 2*syk.β)
+        syk2 = SYKData(syk.N, syk.J, syk.q, 2, syk.β)
         G_2_blocked = BlockedArray(G_2, [L_2 ÷ 2, L_2 ÷ 2], [L_2 ÷ 2, L_2 ÷ 2])
         Σ_2_blocked = SREMatrix.Σ_SD(G_2_blocked, syk2)
         pf_minus_2, pf_plus_2 = SREMatrix.pfaffians(Σ_2_blocked, syk2)
