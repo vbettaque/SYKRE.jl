@@ -73,19 +73,16 @@ end
 
 function G_SD(Σ, syk::SYKData)
     prop_minus, prop_plus = propagtors(Σ, syk)
-    prop_minus_inv = -inv(prop_minus)'
-    prop_ratio = prop_plus * prop_minus_inv
-    det_ratio = det(prop_ratio)
-    println("det_ratio = ", det_ratio)
-	pfaff_ratio = sqrt(det_ratio)
-	p_minus = 1 / (1 + pfaff_ratio)
-    println("p_minus = ", p_minus)
-    if iszero(p_minus)
+    pf_minus = sqrt(det(prop_minus))
+    pf_plus = sqrt(det(prop_plus))
+	p_plus = pf_plus / (pf_plus + pf_minus)
+    println("p_plus = ", p_plus)
+    if iszero(p_plus)
+        return -inv(prop_minus)'
+    elseif isone(p_plus)
         return -inv(prop_plus)'
-    elseif isone(p_minus)
-        return prop_minus_inv
     else
-        return p_minus * prop_minus_inv + (1 - p_minus) * -inv(prop_plus)'
+        return -(p_plus * inv(prop_plus) + (1 - p_plus) * inv(prop_minus))'
     end
 end
 

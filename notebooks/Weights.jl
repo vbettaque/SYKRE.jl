@@ -21,12 +21,12 @@ function bisection(f, a, b; tol=0.0001, max_iter=100)
         c = (a + b) / 2
         println("c = ", c)
         if (b - a) / 2 < tol
-            return c
+            return c, a, b
         end
         fc = f(c)
         println("f(c) = ", fc)
         if iszero(fc)
-            return c
+            return c, a, b
         end
         i += 1
         if sign(fc) == sign(fa)
@@ -41,25 +41,24 @@ function bisection(f, a, b; tol=0.0001, max_iter=100)
 end
 
 function weight_difference(w, L, syk::SYKData)
-    # G_init = SwapMatrix.prepare_initial_state(L, w, syk; q_steps = 100, lerp_weight = 0.01)
-    # G_init = SwapMatrix.prepare_initial_state_2(L, w, syk; J2 = 0.1, init_lerp = 0.1, lerp_divisor = 2, max_iters=1000)
-
     G_init = inv(SwapMatrix.differential(syk.M * L)) - 0.5 * I
     G_init = BlockedArray(G_init, repeat([L], syk.M), repeat([L], syk.M))
 
-    G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.1, lerp_divisor = 2, max_iters=10000)
+    G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.01, lerp_divisor = 2, max_iters=10000)
 
     pf_minus, pf_plus = SwapMatrix.pfaffians(Σ, syk)
     p_plus = pf_plus / (pf_plus + pf_minus)
     return p_plus - w
 end
 
-
 N = 1
 J = 1
 q = 4
 M = 4
-L = 500
+L = 250
+
+βs = Float64.(10:10)
+ws = zeros(length(βs))
 
 path = "data/sre_weights/"
 filename = "weights_M" * string(M) * "_q" * string(q) * "_L" * string(L) * ".csv"
@@ -67,11 +66,8 @@ file = path * filename
 !ispath(path) && mkdir(path)
 if !isfile(file)
     touch(file)
-    write(file, "β,weight\n")
+    write(file, "β,weight,weight_lower,weight_upper\n")
 end
-
-βs = Float64.(7:30)
-ws = zeros(length(βs))
 
 for i in eachindex(βs)
     β = βs[i]
@@ -80,8 +76,8 @@ for i in eachindex(βs)
     syk = SYKData(N, J, q, M, β)
     f(w) = weight_difference(w, L, syk)
 
-    w = bisection(f, 0.00, 0.5)
+    w, w_lower, w_upper = bisection(f, 0.0, 0.5)
 
-    df = DataFrame(β = β, weight = w)
+    df = DataFrame(β = β, weight = w, weight_lower = w_lower, weight_upper = w_upper)
     CSV.write(file, df, append=true)
 end

@@ -63,12 +63,11 @@ function generate_matrix_sre_data(L, M, q, βs)
         write(file, "β,sre,pf_minus_α,pf_plus_α,pf_minus_1,pf_plus_1\n")
     end
 
-    G_M_0 = -inv(SYKMatrix.differential(M * L))'
+    G_M_0 = inv(SYKMatrix.differential(M * L)) - 0.5 * I
     G_M_0 = BlockedArray(G_M_0, repeat([L], M), repeat([L], M))
     G_M_init = G_M_0
-    G_M_init = BlockedArray(G_M_init, repeat([L], M), repeat([L], M))
-    G_2_init = -inv(SYKMatrix.differential(2 * L))'
-    G_Z_init = -inv(SYKMatrix.differential(L))'
+    G_2_init = inv(SYKMatrix.differential(2 * L)) - 0.5 * I
+    G_Z_init = inv(SYKMatrix.differential(L)) - 0.5 * I
 
     for i in eachindex(βs)
         β = βs[i]
@@ -82,9 +81,9 @@ function generate_matrix_sre_data(L, M, q, βs)
         pf_minus_2 = 0
         pf_plus_2 = 0
 
-        t = 0.05
+        t = 0.1
 
-        sre, G_M, G_2, G_Z = SREMatrix.sre(G_M_init, G_2_init, G_Z_init, syk; params_M = (t, 10, 1000), params_2 = (t, 10, 1000), params_Z = (t, 10, 1000))
+        sre, G_M, G_2, G_Z = SREMatrix.sre(G_M_init, G_2_init, G_Z_init, syk; params_M = (t, 2, 1000), params_2 = (t, 2, 1000), params_Z = (t, 2, 1000))
         Σ_M = SREMatrix.Σ_SD(G_M, syk)
         pf_minus_M, pf_plus_M = SREMatrix.pfaffians(Σ_M, syk)
 
@@ -105,8 +104,8 @@ function generate_matrix_sre_data(L, M, q, βs)
 end
 
 # βs = LinRange(1, 30, 30)
-βs = collect(5:10)
-generate_matrix_sre_data(1000, 4, 4, βs)
+βs = Float64.(5:20)
+generate_matrix_sre_data(500, 4, 4, βs)
 
 
 # data_2_1000 = CSV.File("data/sre_matrix/sre2_q2_L1000.csv"; select=["β", "sre"]) |> DataFrame
