@@ -7,7 +7,7 @@ export SYKData
 struct SYKData
     N::Int
     J::Float64
-    q::Int
+    q::Float64
     M::Int
     β::Float64
 end
