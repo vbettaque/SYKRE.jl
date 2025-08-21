@@ -62,13 +62,15 @@ end
 
 function G_SD(Σ, w, syk::SYKData)
     prop_minus, prop_plus = propagtors(Σ, syk)
-    if iszero(w)
-        return -inv(prop_minus)'
+    G = if iszero(w)
+        -inv(prop_minus)'
     elseif isone(w)
-        return -inv(prop_plus)'
+        -inv(prop_plus)'
     else
-        return -(w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
+        -(w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
     end
+    # G -= Diagonal(G)
+    return G
 end
 
 
