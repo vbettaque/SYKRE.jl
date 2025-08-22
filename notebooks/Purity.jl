@@ -19,14 +19,20 @@ G_init = BlockedArray(G_init, repeat([L], M), repeat([L], M))
 
 weights_data = CSV.File("data/sre_weights/weights_M2_q4_L1000.csv") |> DataFrame
 
+G_diffs_max = zeros(length(weights_data[:,1]))
+G_diffs_avg = zeros(length(weights_data[:,1]))
 weights_purity = zeros(length(weights_data[:,1]))
 
 for i = 1:length(weights_data[:,1])
     β = weights_data[i,1]
     w = weights_data[i,2]
     syk = SYKData(N, J, q, M, β)
-    G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.1, lerp_divisor = 2, max_iters=1000)
-    weights_purity[i] = SREMatrix.log2_saddle(G, Σ, syk) - 0.5
+    syk2 = SYKData(N, J, q, 1, 2*β)
+    G_w, Σ_w = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.1, lerp_divisor = 2, max_iters=1000)
+    G_syk, Σ_syk = SYKMatrix.schwinger_dyson(Matrix(G_init), syk2; init_lerp = 0.5, lerp_divisor = 2, max_iters=1000)
+    G_diffs_max[i] = maximum(abs.(G_syk - G_w))
+    G_diffs_avg[i] = sum(abs.(G_syk - G_w)) / sum(abs.(G_syk))
+    weights_purity[i] = SREMatrix.log2_saddle(G_w, Σ_w, syk) - 0.5
 end
 
 syk_data = CSV.File("data/syk_matrix/syk2_q4_L1000 copy.csv") |> DataFrame
@@ -34,9 +40,13 @@ syk_data = CSV.File("data/syk_matrix/syk2_q4_L1000 copy.csv") |> DataFrame
 p = plot(weights_data[:,1], weights_purity .- syk_data[:,2], label="difference")
 p = plot!(weights_data[:,1], (weights_purity .- syk_data[:,2]) ./ syk_data[:,2], label="relative difference")
 xlabel!("β")
-ylabel!("log(Z)")
+ylabel!("Δlog(Z)")
+display(p)
 
-
+p = plot(weights_data[:,1], G_diffs_avg, label="avg relative difference")
+plot!(weights_data[:,1], G_diffs_max, label="max absolute difference")
+xlabel!("β")
+ylabel!("ΔG")
 
 syk = SYKData(N, J, q, M, 10)
 syk2 = SYKData(N, J, q, 1, 20)

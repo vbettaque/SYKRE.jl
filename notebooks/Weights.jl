@@ -44,7 +44,7 @@ function weight_difference(w, L, syk::SYKData)
     G_init = inv(SwapMatrix.differential(syk.M * L)) - 0.5 * I
     G_init = BlockedArray(G_init, repeat([L], syk.M), repeat([L], syk.M))
 
-    G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.5, lerp_divisor = 2, max_iters=100)
+    G, Σ = SwapMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.1, lerp_divisor = 2, max_iters=1000)
 
     display(G)
 
@@ -53,42 +53,67 @@ function weight_difference(w, L, syk::SYKData)
     return p_plus - w
 end
 
+###################################3
+
+# N = 1
+# J = 1
+# q = 4
+# M = 2
+# L = 1000
+
+# #βs = [0.1; Float64.(1:10)]
+# βs = [9., 10.]
+# ws = zeros(length(βs))
+
+# path = "data/sre_weights/"
+# filename = "weights_M" * string(M) * "_q" * string(q) * "_L" * string(L) * ".csv"
+# file = path * filename
+# !ispath(path) && mkdir(path)
+# if !isfile(file)
+#     touch(file)
+#     write(file, "β,weight,weight_lower,weight_upper\n")
+# end
+
+# w_min = 0
+# w_max = 0.5
+
+# for i in eachindex(βs)
+#     β = βs[i]
+#     println(i, " out of ", length(ws), ": β = ", β)
+
+#     syk = SYKData(N, J, q, M, β)
+#     f(w) = weight_difference(w, L, syk)
+
+#     w, w_lower, w_upper = bisection(f, w_min, w_max)
+
+#     df = DataFrame(β = β, weight = w, weight_lower = w_lower, weight_upper = w_upper)
+#     CSV.write(file, df, append=true)
+
+#     w = w_min
+# end
+
+###########################################3
+
 N = 1
 J = 1
 q = 4
 M = 2
-L = 1000
+β = 5
+Ls = collect(1:100) .* 10
+weights = zeros(size(Ls))
 
-#βs = [0.1; Float64.(1:10)]
-βs = [9., 10.]
-ws = zeros(length(βs))
+syk = SYKData(N, J, q, M, β)
 
-path = "data/sre_weights/"
-filename = "weights_M" * string(M) * "_q" * string(q) * "_L" * string(L) * ".csv"
-file = path * filename
-!ispath(path) && mkdir(path)
-if !isfile(file)
-    touch(file)
-    write(file, "β,weight,weight_lower,weight_upper\n")
-end
-
-w_min = 0
-w_max = 0.5
-
-for i in eachindex(βs)
-    β = βs[i]
-    println(i, " out of ", length(ws), ": β = ", β)
-
-    syk = SYKData(N, J, q, M, β)
+for i in eachindex(Ls)
+    L = Ls[i]
+    println(i, " out of ", length(Ls), ": L = ", L)
     f(w) = weight_difference(w, L, syk)
-
-    w, w_lower, w_upper = bisection(f, w_min, w_max)
-
-    df = DataFrame(β = β, weight = w, weight_lower = w_lower, weight_upper = w_upper)
-    CSV.write(file, df, append=true)
-
-    w = w_min
+    w, w_lower, w_upper = bisection(f, 0, 0.5)
+    weights[i] = w
 end
 
-# syk = SYKData(N, J, 2, M, 5)
-# weight_difference(0.49, L, syk)
+p = plot(Ls, weights, label = "M = 2, q = 4, β = 5")
+xaxis!("L")
+yaxis!("weight")
+
+display(p)
