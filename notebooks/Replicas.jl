@@ -5,22 +5,66 @@ using SYKRE.SREMatrix
 using SYKRE.SYKFourier
 using SYKRE.SREFourier
 using SYKRE.Replicas
+using SYKRE.WeightReplicas
+using SYKRE.SwapMatrix
+using BenchmarkTools
+using FFTW
+using LinearAlgebra
+using BlockArrays
 
-M = 4
+# M = 4
+# L = 1000
+
+# R = Replicas.init(M, L)
+# M_R = convert(Matrix{Float64}, R)
+
+# @benchmark LinearAlgebra.inv(M_R)
+
+# D = Replicas.differentials(4, 10)
+# convert(Matrix{Float64}, D)
+
+# Replicas.det(Replicas.inv(D))
+
+# convert(Matrix{Float64}, Replicas.inv(D))
+
+# LinearAlgebra.inv(M_R)
+
+# @benchmark Replicas.inv(R)
+
+# @benchmark Replicas.det(R)
+
+# @benchmark LinearAlgebra.det(M_R)
+
+# R_inv =  Replicas.inv(R)
+# R_det = Replicas.det(R)
+# M_inv = convert(Matrix{Float64}, R_inv)
+
+# @benchmark [exp(im * π * (m - 1) / 4) for m = 1:4]
+# @benchmark tmp = Matrix{ComplexF64}(undef, 1000, 1000)
+
+# Replicas.inv(R)
+# A = ones(ComplexF64, M, L, L)
+
+# @benchmark real(A)
+
+# test = ComplexF64.(ones(2, 2, 2))
+
+# reinterpret(Float64, test)
+
+N = 1
+M = 2
 L = 1000
+β = 5
+J = 1
+q = 4
 
-R1 = ReplicaMatrix(M, L, [rand(Float64, L, L) for _ in 1:M])
-M1 = convert(Matrix{Float64}, R1)
+w = 0.1
 
-R2 = ReplicaMatrix(M, L, [rand(Float64, L, L) for _ in 1:M])
-M2 = convert(Matrix{Float64}, R2)
+syk = SYKData(N, J, q, M, β)
 
-@time Mres = M1 * M2
-@time Rres = R1 * R2
+G_init = Replicas.init(M, L)
+G_init_matrix = BlockedArray(convert(Matrix{Float64}, G_init), repeat([L], M), repeat([L], M))
 
-Mres - Rres
+@time WeightReplicas.schwinger_dyson(G_init, w, syk; init_lerp = 0.01, lerp_divisor = 2, max_iters=1000, tol=1e-5)
 
-@assert(Mres ≈ Rres)
-
-
-convert(Matrix{Float64}, R1)
+@time SwapMatrix.schwinger_dyson(G_init_matrix, w, syk; init_lerp = 0.1, lerp_divisor = 2, max_iters=1000)
