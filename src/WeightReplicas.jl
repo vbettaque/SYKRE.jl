@@ -74,7 +74,7 @@ function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5
 
 		err_new = frobenius(G_lerp - G) / frobenius(G)
         println("err_new = ", err_new)
-		if isapprox(err_new, 0; atol=tol)
+		if err_new < tol
             G = G_lerp
             Σ = Σ_SD(G, syk)
             println("Converged after ", i, " iterations")

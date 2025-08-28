@@ -46,9 +46,9 @@ function weight_difference(w, L, syk::SYKData)
     G_init = Replicas.init(syk.M, L)
 
     t = min(inv(2 * syk.β * syk.J), 0.01)
-    tol = (syk.β * syk.J / L)^2
+    tol = max((syk.β * syk.J / L)^2, 1e-5)
 
-    G, Σ = WeightReplicas.schwinger_dyson(G_init, w, syk; init_lerp = t, lerp_divisor = 2, tol=tol, max_iters=10000)
+    G, Σ = WeightReplicas.schwinger_dyson(G_init, w, syk; init_lerp = t, lerp_divisor = 2, tol=tol, max_iters=1000)
 
     pf_minus, pf_plus = WeightReplicas.pfaffians(Σ, syk)
     p_plus = pf_plus / (pf_plus + pf_minus)
@@ -59,11 +59,11 @@ end
 
 N = 1
 J = 1
-q = 4
+q = 2
 M = 4
 L = 500
 
-βs = LinRange(0.4, 10, 97)
+βs = collect(5:5:400) / 10
 ws = zeros(length(βs))
 
 path = "data/sre_weights/"
@@ -76,7 +76,7 @@ if !isfile(file)
 end
 
 w_min = 0.
-w_max = 0.01
+w_max = 0.5
 
 for i in eachindex(βs)
     β = βs[i]
@@ -90,7 +90,7 @@ for i in eachindex(βs)
     df = DataFrame(β = β, weight = w, weight_lower = w_lower, weight_upper = w_upper)
     CSV.write(file, df, append=true)
 
-    global w_min = w_lower
+    # global w_min = w_lower
 end
 
 weights_data = CSV.File("data/sre_weights/weights_M2_q4_L1000.csv") |> DataFrame
