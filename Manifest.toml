@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "a8a21cdcb620105614690d9731aa0c5a8124a505"
+project_hash = "cf329e5c113e80ae78c456fe966059f0f45e913d"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "60665b326b75db6517939d0e1875850bc4a54368"
@@ -1203,6 +1203,12 @@ version = "1.0.3"
 git-tree-sha1 = "f305871d2f381d21527c770d4788c06c097c9bc1"
 uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
 version = "1.2.0"
+
+[[deps.SkewLinearAlgebra]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "5d44a4f56f7902c4414c0a477b021f17cf088cb3"
+uuid = "5c889d49-8c60-4500-9d10-5d3a22e2f4b9"
+version = "1.0.0"
 
 [[deps.Sobol]]
 deps = ["DelimitedFiles", "Random"]
