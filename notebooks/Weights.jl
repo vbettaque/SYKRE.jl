@@ -63,7 +63,7 @@ q = 2
 M = 4
 L = 500
 
-βs = collect(5:5:400) / 10
+βs = collect(120:5:400) / 10
 ws = zeros(length(βs))
 
 path = "data/sre_weights/"
