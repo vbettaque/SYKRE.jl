@@ -186,7 +186,6 @@ function det(A::ReplicaMatrix)
     for i = 1:A.M
         det *= LinearAlgebra.det(@view diag[:, :, i])
     end
-    display(det)
     return real(det)
 end
 

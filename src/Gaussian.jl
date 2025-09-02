@@ -52,9 +52,9 @@ end
 
 
 
-N = 200
+N = 100
 J = 1
-samples = 200
+samples = 1000
 
 βs = collect(1:300) / 100
 ws = zeros(length(βs))

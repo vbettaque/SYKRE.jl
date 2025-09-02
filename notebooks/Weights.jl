@@ -8,6 +8,7 @@ using SYKRE.SYKFourier
 using SYKRE.SREFourier
 using SYKRE.Replicas
 using SYKRE.WeightReplicas
+using SYKRE.PurityReplicas
 
 
 function bisection(f, a, b; tol=0.0001, max_iter=100)
@@ -45,10 +46,10 @@ end
 function weight_difference(w, L, syk::SYKData)
     G_init = Replicas.init(syk.M, L)
 
-    t = min(inv(2 * syk.β * syk.J), 0.01)
-    tol = max((syk.β * syk.J / L)^2, 1e-5)
+    t = min(inv(2 * syk.β * syk.J), 0.005)
+    tol = max((syk.β * syk.J / L)^2 / 10, 1e-6)
 
-    G, Σ = WeightReplicas.schwinger_dyson(G_init, w, syk; init_lerp = t, lerp_divisor = 2, tol=tol, max_iters=1000)
+    G, Σ = WeightReplicas.schwinger_dyson(G_init, w, syk; init_lerp = t, lerp_divisor = 2, tol=tol, max_iters=10000)
 
     pf_minus, pf_plus = WeightReplicas.pfaffians(Σ, syk)
     p_plus = pf_plus / (pf_plus + pf_minus)
@@ -59,11 +60,11 @@ end
 
 N = 1
 J = 1
-q = 2
+q = 6
 M = 4
 L = 500
 
-βs = collect(120:5:400) / 10
+βs = collect(5:5:400) / 10
 ws = zeros(length(βs))
 
 path = "data/sre_weights/"
@@ -76,7 +77,7 @@ if !isfile(file)
 end
 
 w_min = 0.
-w_max = 0.5
+w_max = 0.15
 
 for i in eachindex(βs)
     β = βs[i]
@@ -85,7 +86,7 @@ for i in eachindex(βs)
     syk = SYKData(N, J, q, M, β)
     f(w) = weight_difference(w, L, syk)
 
-    w, w_lower, w_upper = bisection(f, w_min, w_max; tol=0.00001, max_iter=100)
+    w, w_lower, w_upper = bisection(f, w_min, w_max; tol=1e-5, max_iter=100)
 
     df = DataFrame(β = β, weight = w, weight_lower = w_lower, weight_upper = w_upper)
     CSV.write(file, df, append=true)
@@ -94,6 +95,11 @@ for i in eachindex(βs)
 end
 
 weights_data = CSV.File("data/sre_weights/weights_M2_q4_L1000.csv") |> DataFrame
+
+# β = 4
+# syk = SYKData(N, J, q, M, β)
+# G_init = Replicas.init(M, L)
+# PurityReplicas.schwinger_dyson(G_init, syk; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=10000)
 
 # p = plot(weights_data[:,1], weights_data[:,2], label="q=4, M=2, L=1000")
 # xlabel!("β")
@@ -125,3 +131,30 @@ weights_data = CSV.File("data/sre_weights/weights_M2_q4_L1000.csv") |> DataFrame
 # yaxis!("weight")
 
 # display(p)
+
+###########################################3
+
+N = 1
+J = 1
+q = 4
+M = 4
+β = 10
+L = 500
+
+ws = 0:100 / 100
+
+syk = SYKData(N, J, q, M, β)
+
+for i in eachindex(Ls)
+    L = Ls[i]
+    println(i, " out of ", length(Ls), ": L = ", L)
+    f(w) = weight_difference(w, L, syk)
+    w, w_lower, w_upper = bisection(f, 0, 0.5; tol=0.0001, max_iter=100)
+    weights[i] = w
+end
+
+p = plot(Ls, weights, label = "M = 4, q = 4, β = 5")
+xaxis!("L")
+yaxis!("weight")
+
+display(p)

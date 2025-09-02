@@ -1,4 +1,4 @@
-module WeightReplicas
+module PurityReplicas
 
 using LinearAlgebra
 using BlockArrays
@@ -35,14 +35,22 @@ function pfaffians(Σ::ReplicaMatrix, syk::SYKData)
 end
 
 
-function G_SD(Σ::ReplicaMatrix, w::Real, syk::SYKData)
+function G_SD(Σ::ReplicaMatrix, syk::SYKData)
     prop_minus, prop_plus = propagtors(Σ, syk)
-    G = if iszero(w)
+
+    pf_minus = sqrt(Replicas.det(prop_minus))
+    pf_plus = sqrt(Replicas.det(prop_plus))
+
+    p_plus = pf_plus / (pf_plus + pf_minus)
+
+    println("p_plus = ", p_plus)
+
+    G = if iszero(p_plus)
         -inv(prop_minus)'
-    elseif isone(w)
+    elseif isone(p_plus)
         -inv(prop_plus)'
     else
-        -(w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
+        -(p_plus * inv(prop_plus) + (1 - p_plus) * inv(prop_minus))'
     end
     @views G.blocks[:, :, 1] -= Diagonal(G.blocks[:, :, 1])
     return G
@@ -54,10 +62,9 @@ function Σ_SD(G::ReplicaMatrix, syk::SYKData)
 end
 
 
-function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+function schwinger_dyson(G_init::ReplicaMatrix, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
     @assert iseven(syk.M) && syk.M == G_init.M
     @assert iseven(syk.q)
-    @assert 0 ≤ w ≤ 1
 
 
 	t = init_lerp
@@ -67,7 +74,7 @@ function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5
 
     i = 1
     println("Iteration ", i)
-    G_new = G_SD(Σ, w, syk)
+    G_new = G_SD(Σ, syk)
 
     err = frobenius(G_new - G) / frobenius(G)
 
@@ -103,36 +110,30 @@ function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5
         end
 
         println("Iteration ", i)
-        G_new = G_SD(Σ, w, syk)
+        G_new = G_SD(Σ, syk)
 	end
 
-    plot_matrix(G; title="w = $(w), β = $(syk.β)")
+    plot_matrix(G; title="β = $(syk.β)")
 
 	return G, Σ
 end
 
 
-function action(G::ReplicaMatrix, Σ::ReplicaMatrix, w, syk::SYKData)
+function action(G::ReplicaMatrix, Σ::ReplicaMatrix, syk::SYKData)
     Δτ = syk.β / G.L
 
-    pfaff_minus, pfaff_plus = pfaffians(Σ, syk)
-    prop_term = if iszero(w)
-        -log(pfaff_minus)
-    elseif isone(w)
-        -log(pfaff_plus)
-    else
-        -(w * log(pfaff_plus) + (1 - w) * log(pfaff_minus))
-    end
+    pf_minus, pf_plus = pfaffians(Σ, syk)
+    prop_term = -log(pf_plus + pf_minus) + log(2) / 2
     on_shell_term = 1/2 * syk.J^2 * (1 - 1/syk.q) * Δτ^2 * sum(x -> x^syk.q, G)
 
     return syk.N * (prop_term + on_shell_term)
 end
 
 
-log_saddle(G::ReplicaMatrix, Σ::ReplicaMatrix, w, syk::SYKData) = -action(G, Σ, w, syk)
+log_saddle(G::ReplicaMatrix, Σ::ReplicaMatrix, syk::SYKData) = -action(G, Σ, syk)
 
 
-log2_saddle(::ReplicaMatrix, Σ::ReplicaMatrix, w, syk::SYKData) = log(2, ℯ) * log_saddle(G, Σ, w, syk)
+log2_saddle(G::ReplicaMatrix, Σ::ReplicaMatrix, syk::SYKData) = log(2, ℯ) * log_saddle(G, Σ, syk)
 
 
 end

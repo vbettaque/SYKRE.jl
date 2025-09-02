@@ -64,7 +64,7 @@ function schwinger_dyson(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2
 		G_lerp = t * G_new + (1 - t) * G
 
 		err_new = sum(abs.(G_lerp - G)) / sum(abs.(G))
-		if isapprox(err_new, 0; atol=1e-10)
+		if isapprox(err_new, 0; atol=1e-5)
             G = G_lerp
             Σ = Σ_SD(G, syk)
             println("Converged after ", i, " iterations")
@@ -78,7 +78,7 @@ function schwinger_dyson(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2
         end
 
         err = err_new
-        println("err = ", err, ", t = ", t)      
+        println("err = ", err, ", t = ", t)
 
 		G = G_lerp
         Σ = Σ_SD(G, syk)
@@ -110,11 +110,11 @@ function action(G, Σ, syk::SYKData)
 end
 
 
-logZ_saddle(G, Σ, syk::SYKData) = -action(G, Σ, syk)
+log_saddle(G, Σ, syk::SYKData) = -action(G, Σ, syk)
 
-log2Z_saddle(G, Σ, syk::SYKData) = log(2, ℯ) * logZ_saddle(G, Σ, syk)
+log2_saddle(G, Σ, syk::SYKData) = log(2, ℯ) * log_saddle(G, Σ, syk)
 
-free_energy_saddle(G, Σ, syk::SYKData) = -logZ_saddle(G, Σ, syk) / syk.β
+free_energy_saddle(G, Σ, syk::SYKData) = -log_saddle(G, Σ, syk) / syk.β
 
 
 function log_purity_saddle(G_init, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2, max_iters=1000)
