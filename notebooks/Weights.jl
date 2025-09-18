@@ -216,6 +216,56 @@ end
 
 ##############################################
 
+# N = 1
+# J = 1
+# q = 4
+# M = 4
+# β = 10
+# L = 500
+
+# G_init_2 = Replicas.init(2, L)
+# G_init_4 = Replicas.init(4, L)
+# ws = LinRange(0, 0.05, 10)
+# ps_2 = zeros(length(ws))
+# ps_4 = zeros(length(ws))
+
+# syk_2 = SYKData(N, J, q, 2, β)
+# syk_4 = SYKData(N, J, q, 4, β)
+
+# for i in eachindex(ws)
+#     w = ws[i]
+#     println(i, " out of ", length(ws), ": w = ", w)
+
+#     G_2, Σ_2 = WeightReplicas.schwinger_dyson(G_init_2, w, syk_2; init_lerp = 0.01, lerp_divisor =2, tol=1e-5, max_iters=1000)
+#     G_4, Σ_4 = WeightReplicas.schwinger_dyson(G_init_4, w, syk_4; init_lerp = 0.01, lerp_divisor =2, tol=1e-5, max_iters=1000)
+
+#     pf_minus_2, pf_plus_2 = WeightReplicas.pfaffians(Σ_2, syk_2)
+#     pf_minus_4, pf_plus_4 = WeightReplicas.pfaffians(Σ_4, syk_4)
+#     ps_2[i] = pf_plus_2^2 / (pf_plus_2^2 + pf_minus_2^2)
+#     ps_4[i] = pf_plus_4 / (pf_plus_4 + pf_minus_4)
+# end
+
+# p = plot(ws, ps_2, label="2b2")
+# plot!(ws, ps_4, label = "1b4")
+# plot!(ws, ws, label = "w")
+# xaxis!("w")
+# yaxis!("p")
+
+# display(p)
+
+#############################################################
+
+function binary_entropy2(xs)
+    entropy = zeros(length(xs))
+    for i = eachindex(xs)
+        @assert 0 ≤ xs[i] ≤ 1
+        if !iszero(xs[i]) && !isone(xs[i])
+            entropy[i] = - xs[i] * log2(xs[i]) - (1 - xs[i]) * log2(1 - xs[i])
+        end
+    end
+    return entropy
+end
+
 N = 1
 J = 1
 q = 4
@@ -225,9 +275,14 @@ L = 500
 
 G_init_2 = Replicas.init(2, L)
 G_init_4 = Replicas.init(4, L)
-ws = LinRange(0, 0.1, 20)
-ps_2 = zeros(length(ws))
-ps_4 = zeros(length(ws))
+# G_init_4 = blockkron([1 -0.5 0 0; -0.5 1 0 0; 0 0 1 -0.5; 0 0 -0.5 1], inv(SwapMatrix.differential(L)) - I)
+# G_init_4 = BlockArray(G_init_4, [L, L, L , L], [L, L, L, L])
+ws = LinRange(1, 0, 21)
+
+entropies = binary_entropy2(ws)
+
+saddles_2 = zeros(length(ws))
+saddles_4 = zeros(length(ws))
 
 syk_2 = SYKData(N, J, q, 2, β)
 syk_4 = SYKData(N, J, q, 4, β)
@@ -236,19 +291,22 @@ for i in eachindex(ws)
     w = ws[i]
     println(i, " out of ", length(ws), ": w = ", w)
 
-    G_2, Σ_2 = WeightReplicas.schwinger_dyson(G_init_2, w, syk_2; init_lerp = 0.01, lerp_divisor =2, tol=1e-5, max_iters=1000)
-    G_4, Σ_4 = WeightReplicas.schwinger_dyson(G_init_4, w, syk_4; init_lerp = 0.01, lerp_divisor =2, tol=1e-5, max_iters=1000)
-
-    pf_minus_2, pf_plus_2 = WeightReplicas.pfaffians(Σ_2, syk)
-    pf_minus_4, pf_plus_4 = WeightReplicas.pfaffians(Σ_4, syk)
-    ps_2[i] = pf_plus_2^2 / (pf_plus_2^2 + pf_minus_2^2)
-    ps_4[i] = pf_plus_4 / (pf_plus_4 + pf_minus_4)
+    G_2, Σ_2 = WeightReplicas.schwinger_dyson(G_init_2, w, syk_2; init_lerp = 0.01, lerp_divisor =2, tol=1e-10, max_iters=1000)
+    G_4, Σ_4 = WeightReplicas.schwinger_dyson(G_init_4, w, syk_4; init_lerp = 0.01, lerp_divisor =2, tol=1e-10, max_iters=1000)
+    # G_4, Σ_4 = SwapMatrix.schwinger_dyson(G_init_4, w, syk_4; init_lerp = 0.5, lerp_divisor =2, max_iters=1000)
+    saddles_2[i] = 2 * WeightReplicas.log2_saddle(G_2, Σ_2, w, syk_2)
+    # saddles_4[i] = SwapMatrix.log2_saddle(G_4, Σ_4, w, syk_4)
+    saddles_4[i] = WeightReplicas.log2_saddle(G_4, Σ_4, w, syk_4)
+    global G_init_2 = G_2
+    @views G_init_2.blocks[:, :, 1] -= Diagonal(G_init_2.blocks[:, :, 1])
+    global G_init_4 = G_4
+    @views G_init_4.blocks[:, :, 1] -= Diagonal(G_init_4.blocks[:, :, 1])
 end
 
-p = plot(ws, ps_2, label="2b2")
-plot!(ws, ps_4, label = "1b4")
-plot!(ws, ws, label = "w")
+p = plot(ws, saddles_2 + entropies, label="2b2")
+plot!(ws, saddles_4 + entropies, label = "1b4")
+# plot!(ws, ws, label = "w")
 xaxis!("w")
-yaxis!("p")
+yaxis!("-I(w) + h(w)")
 
 display(p)

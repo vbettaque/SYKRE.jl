@@ -75,9 +75,11 @@ end
 
 function init2(M, L)
     blocks = ones(L, L, M) / 2
-    for j = 1:L
-        for i = 1:j
-            @view(blocks[i, j, 1]) .*= sign(i - j)
+    for k = 1:M
+        for j = 1:L
+            for i = 1:j
+                @view(blocks[i, j, k]) .*= sign(i - j)
+            end
         end
     end
     bfft_plan = plan_bfft!(ComplexF64.(blocks), 3; flags=FFTW.EXHAUSTIVE, timelimit=Inf)

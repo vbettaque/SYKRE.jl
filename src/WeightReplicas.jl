@@ -44,7 +44,7 @@ function G_SD(Σ::ReplicaMatrix, w::Real, syk::SYKData)
     else
         -(w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
     end
-    @views G.blocks[:, :, 1] -= Diagonal(G.blocks[:, :, 1])
+    # @views G.blocks[:, :, 1] -= Diagonal(G.blocks[:, :, 1])
     return G
 end
 
@@ -59,6 +59,7 @@ function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5
     @assert iseven(syk.q)
     @assert 0 ≤ w ≤ 1
 
+    # plot_matrix(G_init; title="G_init")
 
 	t = init_lerp
 
@@ -132,7 +133,7 @@ end
 log_saddle(G::ReplicaMatrix, Σ::ReplicaMatrix, w, syk::SYKData) = -action(G, Σ, w, syk)
 
 
-log2_saddle(::ReplicaMatrix, Σ::ReplicaMatrix, w, syk::SYKData) = log(2, ℯ) * log_saddle(G, Σ, w, syk)
+log2_saddle(G::ReplicaMatrix, Σ::ReplicaMatrix, w, syk::SYKData) = log(2, ℯ) * log_saddle(G, Σ, w, syk)
 
 
 end

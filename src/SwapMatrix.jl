@@ -84,6 +84,7 @@ function schwinger_dyson(G_init, w, syk::SYKData; init_lerp = 0.5, lerp_divisor 
     @assert iseven(syk.q)
     @assert 0 ≤ w ≤ 1
 
+    plot_matrix(G_init; title="G_init")
 
 	t = init_lerp
 
@@ -227,8 +228,8 @@ function prepare_initial_state_2(L, w, syk::SYKData; J2 = 0.01, init_lerp = 0.5,
 end
 
 
-log_trace_swap(G, Σ, w, syk) = -action(G, Σ, w, syk)
+log_saddle(G, Σ, w, syk) = -action(G, Σ, w, syk)
 
-log2_trace_swap(G, Σ, w, syk::SYKData) = log(2, ℯ) * log_trace_swap(G, Σ, w, syk)
+log2_saddle(G, Σ, w, syk::SYKData) = log(2, ℯ) * log_saddle(G, Σ, w, syk)
 
 end
