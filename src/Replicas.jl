@@ -73,6 +73,18 @@ function init(M, L)
 end
 
 
+function init2(M, L)
+    blocks = ones(L, L, M) / 2
+    for j = 1:L
+        for i = 1:j
+            @view(blocks[i, j, 1]) .*= sign(i - j)
+        end
+    end
+    bfft_plan = plan_bfft!(ComplexF64.(blocks), 3; flags=FFTW.EXHAUSTIVE, timelimit=Inf)
+    return ReplicaMatrix(M, L, blocks, bfft_plan)
+end
+
+
 function Base.:(+)(A::ReplicaMatrix, B::ReplicaMatrix)
     @assert A.M == B.M && A.L == B.L
     return ReplicaMatrix(A.M, A.L, A.blocks .+ B.blocks, A.bfft_plan)
