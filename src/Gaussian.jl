@@ -20,7 +20,7 @@ function rand_covariance(N, β, J)
     @assert iseven(N)
 
     H = rand_hamiltonian(N, J)
-    return tanh(β * H)
+    return 2 * tanh(β * H / 2)
 end
 
 function probability(Γ::AbstractMatrix, v::AbstractVector)
@@ -56,7 +56,7 @@ N = 100
 J = 1
 samples = 1000
 
-βs = collect(1:300) / 100
+βs = collect(0:1:20)
 ws = zeros(length(βs))
 
 H = rand_hamiltonian(N, J)
@@ -64,7 +64,7 @@ H = rand_hamiltonian(N, J)
 for i = eachindex(βs)
     β = βs[i]
     println("β = ", β)
-    Γ = tanh(β * H)
+    Γ = 2 * tanh(β * H / 2)
     w_means = zeros(samples)
     ps = zeros(samples)
     Threads.@threads for j = 1:samples
@@ -75,7 +75,7 @@ for i = eachindex(βs)
     ws[i] = sum(w_means) / sum(ps)
 end
 
-p = plot(βs, ws, label="N = 200, J = 1")
+p = plot(βs, ws, label="N = 100, J = 1")
 xlabel!("β")
 ylabel!("w_crit")
 display(p)
