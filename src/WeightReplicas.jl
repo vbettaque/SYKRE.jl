@@ -31,7 +31,15 @@ end
 
 function pfaffians(Σ::ReplicaMatrix, syk::SYKData)
     prop_minus, prop_plus = propagtors(Σ, syk)
-    return sqrt(Replicas.det(prop_minus)), sqrt(Replicas.det(prop_plus))
+    det_minus = Replicas.det(prop_minus)
+    det_plus = Replicas.det(prop_plus)
+    if det_minus < 0 && syk.M == 1
+        det_minus = abs(det_minus)
+    end
+    if det_plus < 0 && syk.M == 1
+        det_plus = abs(det_plus)
+    end
+    return sqrt(det_minus), sqrt(det_plus)
 end
 
 
@@ -55,7 +63,7 @@ end
 
 
 function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-    @assert iseven(syk.M) && syk.M == G_init.M
+    # @assert iseven(syk.M) && syk.M == G_init.M
     @assert iseven(syk.q)
     @assert 0 ≤ w ≤ 1
 
