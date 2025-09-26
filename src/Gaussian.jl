@@ -4,8 +4,27 @@ using LinearAlgebra
 using SkewLinearAlgebra
 using Distributions
 using Base.Threads
-using Plots
+using ProgressMeter
 
+
+function bitvec(n, len::Integer)
+    @assert n >= 0
+    @assert len > 0
+
+    vec = zeros(Integer, len)
+    return digits!(vec, n, base=2)
+end
+
+function indexed_even_bitvec(i, len::Integer)
+    @assert len > 1
+    @assert 1 <= i <= (big"2")^(len - 1)
+
+    n = i - 1
+    vec = zeros(len)
+    vec[1] = isodd(count_ones(n))
+    vec[2:len] = bitvec(n, len - 1)
+    return vec
+end
 
 function rand_hamiltonian(N, J)
     @assert iseven(N)
@@ -20,7 +39,7 @@ function rand_covariance(N, β, J)
     @assert iseven(N)
 
     H = rand_hamiltonian(N, J)
-    return 2 * tanh(β * H / 2)
+    return tanh(β * H)
 end
 
 function probability(Γ::AbstractMatrix, v::AbstractVector)
@@ -51,33 +70,26 @@ function sample_probability(Γ)
 end
 
 
+function full_sample(Γ, α=1)
+    N, N_ = size(Γ)
+    Γ_ = I + Matrix(Γ)
+    purity = det(Γ_)
 
-N = 100
-J = 1
-samples = 1000
+    counts = zeros(N + 1)
+    ps = zeros(N + 1)
 
-βs = collect(0:1:20)
-ws = zeros(length(βs))
+    ps[1] = (1 / purity)^α
+    counts[1] = 1
 
-H = rand_hamiltonian(N, J)
-
-for i = eachindex(βs)
-    β = βs[i]
-    println("β = ", β)
-    Γ = 2 * tanh(β * H / 2)
-    w_means = zeros(samples)
-    ps = zeros(samples)
-    Threads.@threads for j = 1:samples
-        p, v = sample_probability(Γ)
-        w_means[j] = p * Int(sum(v))
-        ps[j] = p
+    Threads.@threads for i = 2:2^(N - 1)
+        v =  indexed_even_bitvec(i, N)
+        v_bit = isone.(v)
+        w = Int(sum(v))
+        ps[w + 1] += (det(Γ[v_bit, v_bit]) / purity)^α
+        counts[w + 1] += 1
     end
-    ws[i] = sum(w_means) / sum(ps)
-end
 
-p = plot(βs, ws, label="N = 100, J = 1")
-xlabel!("β")
-ylabel!("w_crit")
-display(p)
+    return ps, counts
+end
 
 end

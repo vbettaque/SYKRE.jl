@@ -10,5 +10,6 @@ include("SYKFourier.jl")
 include("SREFourier.jl")
 include("SwapMatrix.jl")
 include("WeightReplicas.jl")
+include("Gaussian.jl")
 
 end
