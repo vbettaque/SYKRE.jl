@@ -19,7 +19,7 @@ M = 4
 L = 500
 w = 0.5
 
-R = 4
+R = 3
 
 syk = SYKData(N, J, q, R, β)
 
@@ -27,6 +27,8 @@ powervec(ss, n) = Iterators.product(ntuple(i->ss, n)...)
 
 for p in powervec([0, 1, -1], R÷2)
     G_init = Replicas.init(R, L)
+    leading_zero = true
+    findfirst(p .< 0) < findfirst(p .> 0) && continue
     for i = 1:(R÷2-1)
         @views G_init.blocks[:, :, i+1] .*= p[i]
         @views G_init.blocks[:, :, R-i+1] .*= p[i]
