@@ -270,15 +270,30 @@ N = 1
 J = 1
 q = 4
 M = 4
-β = 10
+β = 35
 L = 500
 
-G_init_1 = Replicas.init(1, 2*L)
-G_init_2 = Replicas.init(2, L)
-G_init_4 = Replicas.init(4, L)
-# G_init_4 = blockkron([1 -0.5 0 0; -0.5 1 0 0; 0 0 1 -0.5; 0 0 -0.5 1], inv(SwapMatrix.differential(L)) - I)
-# G_init_4 = BlockArray(G_init_4, [L, L, L , L], [L, L, L, L])
 ws = LinRange(0, 1, 21)
+
+syk_1 = SYKData(N, J, q, 1, β)
+G_init_1 = Replicas.init(1, 2*L)
+
+syk_2 = SYKData(N, J, q, 2, β)
+G_init_2 = Replicas.init(2, L)
+
+syk_4 = SYKData(N, J, q, 4, β)
+G_init_4 = Replicas.init(4, L)
+
+G_init_1, _ = WeightReplicas.schwinger_dyson(G_init_1, 0, syk_1; init_lerp = 0.01, lerp_divisor = 2, tol=1e-10, max_iters=1000)
+@views G_init_1.blocks[:, :, 1] -= Diagonal(G_init_1.blocks[:, :, 1])
+
+@views G_init_2.blocks[:, :, 1] = copy(G_init_1.blocks[1:L, 1:L])
+@views G_init_2.blocks[:, :, 2] = copy(G_init_1.blocks[L+1:2L, 1:L])
+
+@views G_init_4.blocks[:, :, 1] = copy(G_init_1.blocks[1:L, 1:L])
+@views G_init_4.blocks[:, :, 2] = copy(G_init_1.blocks[L+1:2L, 1:L])
+@views G_init_4.blocks[:, :, 3] = zeros(L, L)
+@views G_init_4.blocks[:, :, 4] = copy(G_init_1.blocks[L+1:2L, 1:L])'
 
 entropies = binary_entropy2(ws)
 
@@ -286,39 +301,18 @@ saddles_1 = zeros(length(ws))
 saddles_2 = zeros(length(ws))
 saddles_4 = zeros(length(ws))
 
-syk_1 = SYKData(N, J, q, 1, β)
-syk_2 = SYKData(N, J, q, 2, β)
-syk_4 = SYKData(N, J, q, 4, β)
-
-G_init_1, _ = WeightReplicas.schwinger_dyson(G_init_1, 0, syk_1; init_lerp = 0.5, lerp_divisor = 2, tol=1e-10, max_iters=1000)
-
-# @views G_init_1.blocks[:, :] = copy(G_init_seed.blocks[1:L, 1:L])
-
-# @views G_init_2.blocks[:, :, 1] = copy(G_init_seed.blocks[1:L, 1:L])
-# @views G_init_2.blocks[:, :, 2] = zeros(L, L) #copy(G_init_seed.blocks[L+1:2L, 1:L])
-
-# @views G_init_4.blocks[:, :, 1] = copy(G_init_2.blocks[:, :, 1])
-# @views G_init_4.blocks[:, :, 2] = copy(G_init_2.blocks[:, :, 2])
-# @views G_init_4.blocks[:, :, 3] = zeros(L, L)
-# @views G_init_4.blocks[:, :, 4] = copy(G_init_2.blocks[:, :, 2]')
-
 for i in eachindex(ws)
     w = ws[i]
     println(i, " out of ", length(ws), ": w = ", w)
 
     G_1, Σ_1 = WeightReplicas.schwinger_dyson(G_init_1, w, syk_1; init_lerp = 0.5, lerp_divisor =2, tol=1e-10, max_iters=1000)
 
-    @views G_init_2.blocks[:, :, 1] = copy(G_1.blocks[1:L, 1:L])
-    @views G_init_2.blocks[:, :, 2] = copy(G_1.blocks[L+1:2L, 1:L])
+    # @views G_init_2.blocks[:, :, 1] = copy(G_1.blocks[1:L, 1:L])
+    # @views G_init_2.blocks[:, :, 2] = copy(G_1.blocks[L+1:2L, 1:L])
 
-    G_2, Σ_2 = WeightReplicas.schwinger_dyson(G_init_2, w, syk_2; init_lerp = 0.1, lerp_divisor =2, tol=1e-10, max_iters=1000)
+    G_2, Σ_2 = WeightReplicas.schwinger_dyson(G_init_2, w, syk_2; init_lerp = 0.01, lerp_divisor =2, tol=1e-10, max_iters=1000)
 
-    @views G_init_4.blocks[:, :, 1] = copy(G_2.blocks[:, :, 1])
-    @views G_init_4.blocks[:, :, 2] = copy(G_2.blocks[:, :, 2])
-    @views G_init_4.blocks[:, :, 3] = zeros(L, L)
-    @views G_init_4.blocks[:, :, 4] = copy(G_2.blocks[:, :, 2]')
-
-    G_4, Σ_4 = WeightReplicas.schwinger_dyson(G_init_4, w, syk_4; init_lerp = 0.1, lerp_divisor =2, tol=1e-10, max_iters=1000)
+    G_4, Σ_4 = WeightReplicas.schwinger_dyson(G_init_4, w, syk_4; init_lerp = 0.01, lerp_divisor =2, tol=1e-10, max_iters=1000)
     # G_4, Σ_4 = SwapMatrix.schwinger_dyson(G_init_4, w, syk_4; init_lerp = 0.5, lerp_divisor =2, max_iters=1000)
     saddles_1[i] = 4 * WeightReplicas.log2_saddle(G_1, Σ_1, w, syk_1)
     saddles_2[i] = 2 * WeightReplicas.log2_saddle(G_2, Σ_2, w, syk_2)
@@ -330,11 +324,35 @@ for i in eachindex(ws)
     # @views G_init_4.blocks[:, :, 1] -= Diagonal(G_init_4.blocks[:, :, 1])
 end
 
-p = plot(ws, saddles_1 + entropies, label="4b1")
-plot!(ws, saddles_2 + entropies, label = "2b2")
-plot!(ws, saddles_4 + entropies, label = "1b4")
+
+# p = plot(ws, saddles_1 + entropies, label="4b1")
+plot(ws, saddles_2, label = "2b2")
+# plot!(ws, saddles_4 + entropies, label = "1b4")
 # plot!(ws, ws, label = "w")
 xaxis!("w")
 yaxis!("-I(w) + h(w)")
 
 display(p)
+
+
+# for j = 1:L
+#     for i = 1:L
+#         G_init_1.blocks[i, j] = i >= j ? 1 : 0
+#     end
+# end
+# G_init_1
+# G_1, Σ_1 = WeightReplicas.schwinger_dyson(G_init_1, 0.5, syk_1; init_lerp = 0.1, lerp_divisor =2, tol=1e-10, max_iters=1000)
+# saddle_1 = 2 * WeightReplicas.log2_saddle(G_1, Σ_1, 0.5, syk_1)
+
+# WeightReplicas.log2_saddle(G_init_seed, Σ_init_seed, 0.0, syk_seed)
+
+# G_1
+
+#  4 * sum(x -> x^4, G_1)
+
+# G_4, Σ_4 = WeightReplicas.schwinger_dyson(G_init_4, 1, syk_4; init_lerp = 0.01, lerp_divisor =2, tol=1e-10, max_iters=1000)
+# saddle_4 = WeightReplicas.log2_saddle(G_4, Σ_4, 0.3, syk_4)
+
+# G_4
+
+#  sum(x -> x^4, G_4)

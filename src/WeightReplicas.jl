@@ -125,6 +125,8 @@ function action(G::ReplicaMatrix, Σ::ReplicaMatrix, w, syk::SYKData)
     Δτ = syk.β / G.L
 
     pfaff_minus, pfaff_plus = pfaffians(Σ, syk)
+    println("pf_minus = ", pfaff_minus)
+    println("pf_plus = ", pfaff_plus)
     prop_term = if iszero(w)
         -log(pfaff_minus)
     elseif isone(w)
@@ -132,8 +134,9 @@ function action(G::ReplicaMatrix, Σ::ReplicaMatrix, w, syk::SYKData)
     else
         -(w * log(pfaff_plus) + (1 - w) * log(pfaff_minus))
     end
+    println("prop_term = ", prop_term)
     on_shell_term = 1/2 * syk.J^2 * (1 - 1/syk.q) * Δτ^2 * sum(x -> x^syk.q, G)
-
+    println("on_shell_term = ", on_shell_term)
     return syk.N * (prop_term + on_shell_term)
 end
 
