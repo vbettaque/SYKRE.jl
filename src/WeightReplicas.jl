@@ -11,7 +11,8 @@ using ..Replicas
 
 function plot_matrix(A::ReplicaMatrix; title="")
     A_M = convert(Matrix{Float64}, A)
-    p = heatmap(A_M, aspect_ratio = 1, clims=(-0.5, 0.5), yflip = true, color = :greys, title=title)
+    grad = cgrad([:blue, :white, :orange], [0.0, 0.5, 1.0])
+    p = heatmap(A_M, aspect_ratio = 1, clims=(-0.5, 0.5), yflip = true, color = grad, title=title)
 
     display(p)
 end
