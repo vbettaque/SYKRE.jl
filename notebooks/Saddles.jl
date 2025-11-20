@@ -19,23 +19,35 @@ M = 4
 L = 500
 w = 0.5
 
-R = 3
+R = 2
 
 syk = SYKData(N, J, q, R, β)
 
 powervec(ss, n) = Iterators.product(ntuple(i->ss, n)...)
 
 for p in powervec([0, 1, -1], R÷2)
+    # all(iszero.(p)) && continue
     G_init = Replicas.init(R, L)
-    leading_zero = true
-    findfirst(p .< 0) < findfirst(p .> 0) && continue
-    for i = 1:(R÷2-1)
-        @views G_init.blocks[:, :, i+1] .*= p[i]
-        @views G_init.blocks[:, :, R-i+1] .*= p[i]
+    # if !isnothing(findfirst(p .< 0))
+    #     isnothing(findfirst(p .> 0)) && continue
+    #     findfirst(p .< 0) < findfirst(p .> 0) && continue
+    # end
+    if iseven(R)
+        for i = 1:(R÷2-1)
+            @views G_init.blocks[:, :, i+1] .*= p[i]
+            @views G_init.blocks[:, :, R-i+1] .*= p[i]
+        end
+        @views G_init.blocks[:, :, R÷2+1] .*= p[R÷2]
+    else
+        for i = 1:((R-1)÷2)
+            @views G_init.blocks[:, :, i+1] .*= p[i]
+            @views G_init.blocks[:, :, R-i+1] .*= p[i]
+        end
     end
-    @views G_init.blocks[:, :, R÷2+1] .*= p[R÷2]
     WeightReplicas.plot_matrix(G_init; title="$(p)")
-    WeightReplicas.schwinger_dyson(G_init, w, syk; init_lerp = 0.5, lerp_divisor = 2, tol=1e-10, max_iters=1000)
+    G, Σ = WeightReplicas.schwinger_dyson(G_init, w, syk; init_lerp = 0.1, lerp_divisor = 2, tol=1e-10, max_iters=1000)
+    log2_saddle = WeightReplicas.log2_saddle(G, Σ, w, syk)
+    WeightReplicas.plot_matrix(G; title="log2_saddle = $(log2_saddle)")
 end
 
 # G_init_1 = Replicas.init(1, 2*L)
