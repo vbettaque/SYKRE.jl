@@ -14,11 +14,11 @@ using SYKRE.WeightMatrix
 N = 1
 J = 1
 q = 2
-β = 2
-L = 500
+β = 50
+L = 1000
 w = 0.5
 
-R = 6
+R = 4
 
 syk = SYKData(N, J, q, R, β)
 

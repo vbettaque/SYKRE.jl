@@ -6,43 +6,55 @@ using SYKRE.SYKMatrix
 using SYKRE.SREMatrix
 using SYKRE.SYKFourier
 using SYKRE.SREFourier
-using SYKRE.SwapMatrix
+using SYKRE.WeightMatrix
 using .Replicas
 
-purity_2_data = CSV.File("data/sre_purities/purity_M4_q2_L500.csv") |> DataFrame
-purity_4_data = CSV.File("data/sre_purities/purity_M4_q4_L500.csv") |> DataFrame
-purity_6_data = CSV.File("data/sre_purities/purity_M4_q6_L500.csv") |> DataFrame
 
-p = plot(purity_2_data[:,1], purity_2_data[:,2], label="\$q = 2\$")
-plot!(purity_4_data[:,1], purity_4_data[:,2], label="\$q = 4\$")
-plot!(purity_6_data[:,1], purity_6_data[:,2], label="\$q = 6\$")
+# 1R2
 
-xlabel!("\$β\$")
-ylabel!("\$-I_4\$")
+# beta = 0.1
 
+weight_1R2_beta01_q2 = CSV.File("data/paper/weights/1R2/weight_1R2_beta0.1_q2_L1000.csv") |> DataFrame
+weight_1R2_beta01_q4 = CSV.File("data/paper/weights/1R2/weight_1R2_beta0.1_q4_L1000.csv") |> DataFrame
+weight_1R2_beta01_q6 = CSV.File("data/paper/weights/1R2/weight_1R2_beta0.1_q6_L1000.csv") |> DataFrame
+weight_1R2_beta01_q8 = CSV.File("data/paper/weights/1R2/weight_1R2_beta0.1_q8_L1000.csv") |> DataFrame
 
-sre_2_data = CSV.File("data/sre/sre_M4_q2_L500.csv") |> DataFrame
-sre_4_data = CSV.File("data/sre/sre_M4_q4_L500.csv") |> DataFrame
-sre_6_data = CSV.File("data/sre/sre_M4_q6_L500.csv") |> DataFrame
+# -I(w)
 
-p = plot(sre_2_data[:,1], sre_2_data[:,2], label="\$q = 2\$")
-plot!(sre_4_data[:,1], sre_4_data[:,2], label="\$q = 4\$")
-plot!(sre_6_data[:,1], sre_6_data[:,2], label="\$q = 6\$")
+p = plot(weight_1R2_beta01_q2[:,1], weight_1R2_beta01_q2[:,2], label="\$q = 2\$")
+plot!(weight_1R2_beta01_q4[:,1], weight_1R2_beta01_q4[:,2], label="\$q = 4\$")
+plot!(weight_1R2_beta01_q6[:,1], weight_1R2_beta01_q6[:,2], label="\$q = 6\$")
+plot!(weight_1R2_beta01_q8[:,1], weight_1R2_beta01_q8[:,2], label="\$q = 8\$")
 
-xlabel!("\$β\$")
-ylabel!("\$M_2\$")
+xlabel!("\$w\$")
+ylabel!("\$-I(w)\$")
 
-ylims!(0,2)
+title!("1R2 (\$ \\beta = 0.1\$)")
 
-weights_2_data = CSV.File("data/sre_weights/weights_M4_q2_L500.csv") |> DataFrame
-weights_4_data = CSV.File("data/sre_weights/weights_M4_q4_L500.csv") |> DataFrame
-weights_6_data = CSV.File("data/sre_weights/weights_M4_q6_L500.csv") |> DataFrame
+# -I(w) + H(w)
 
-p = plot(weights_2_data[:,1], weights_2_data[:,2], label="\$q = 2\$")
-plot!(weights_4_data[:,1], weights_4_data[:,2], label="\$q = 4\$")
-plot!(weights_6_data[:,1], weights_6_data[:,2], label="\$q = 6\$")
+p = plot(weight_1R2_beta01_q2[:,1], weight_1R2_beta01_q2[:,2] + weight_1R2_beta01_q2[:,6], label="\$q = 2\$")
+plot!(weight_1R2_beta01_q4[:,1], weight_1R2_beta01_q4[:,2] + weight_1R2_beta01_q4[:,6], label="\$q = 4\$")
+plot!(weight_1R2_beta01_q6[:,1], weight_1R2_beta01_q6[:,2] + weight_1R2_beta01_q6[:,6], label="\$q = 6\$")
+plot!(weight_1R2_beta01_q8[:,1], weight_1R2_beta01_q8[:,2] + weight_1R2_beta01_q8[:,6], label="\$q = 8\$")
 
-xlabel!("\$β\$")
-ylabel!("\$w_{\\mathrm{crit}}\$")
+xlabel!("\$w\$")
+ylabel!("\$-I(w) + H(w)\$")
 
-ylims!(0,2)
+title!("1R2 (\$ \\beta = 0.1\$)")
+
+# p_+
+
+p = plot(weight_1R2_beta01_q2[:,1], weight_1R2_beta01_q2[:,5], label="\$q = 2\$")
+plot!(weight_1R2_beta01_q4[:,1], weight_1R2_beta01_q4[:,5], label="\$q = 4\$")
+plot!(weight_1R2_beta01_q6[:,1], weight_1R2_beta01_q6[:,5], label="\$q = 6\$")
+plot!(weight_1R2_beta01_q8[:,1], weight_1R2_beta01_q8[:,5], label="\$q = 8\$")
+plot!(weight_1R2_beta01_q8[:,1], weight_1R2_beta01_q8[:,1], label="\$w\$")
+
+ylims!(0, 0.4)
+
+xlabel!("\$w\$")
+ylabel!("\$p_+(w)\$")
+
+title!("1R2 (\$ \\beta = 0.1\$)")
+
