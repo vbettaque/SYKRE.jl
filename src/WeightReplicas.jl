@@ -11,8 +11,10 @@ using ..Replicas
 
 function plot_matrix(A::ReplicaMatrix; title="")
     A_M = convert(Matrix{Float64}, A)
-    grad = cgrad([:blue, :white, :orange], [0.0, 0.5, 1.0])
-    p = heatmap(A_M, aspect_ratio = 1, clims=(-0.5, 0.5), yflip = true, color = grad, title=title)
+    blue = RGB(0,101.0/255,1)
+    orange = RGB(1,154.0/255,0)
+    grad = cgrad([blue, :gray95, orange], [0.0, 0.5, 1.0])
+    p = heatmap(A_M, aspect_ratio = 1, clims=(-1.0, 1.0), yflip = true, color = grad, title=title)
 
     display(p)
 end
@@ -23,8 +25,8 @@ function propagtors(Σ::ReplicaMatrix, syk::SYKData)
     D_minus = Replicas.differentials(Σ.M, Σ.L; periodic = false)
     D_plus = Replicas.differentials(Σ.M, Σ.L; periodic = true)
 
-    prop_minus = D_minus - Δτ^2 * Σ
-	prop_plus = D_plus - Δτ^2 * Σ
+    prop_minus = D_minus - 2 * Δτ^2 * Σ
+	prop_plus = D_plus - 2 * Δτ^2 * Σ
 
     return prop_minus, prop_plus
 end
@@ -47,11 +49,11 @@ end
 function G_SD(Σ::ReplicaMatrix, w::Real, syk::SYKData)
     prop_minus, prop_plus = propagtors(Σ, syk)
     G = if iszero(w)
-        -inv(prop_minus)'
+        -2 * inv(prop_minus)'
     elseif isone(w)
-        -inv(prop_plus)'
+        -2 * inv(prop_plus)'
     else
-        -(w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
+        -2 * (w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
     end
     # @views G.blocks[:, :, 1] -= Diagonal(G.blocks[:, :, 1])
     return G
@@ -116,7 +118,7 @@ function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5
         G_new = G_SD(Σ, w, syk)
 	end
 
-    # plot_matrix(G; title="w = $(w), β = $(syk.β)")
+    plot_matrix(G; title="w = $(w), β = $(syk.β)")
 
 	return G, Σ
 end

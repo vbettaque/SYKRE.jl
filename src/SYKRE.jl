@@ -8,7 +8,7 @@ include("Replicas.jl")
 include("PurityReplicas.jl")
 include("SYKFourier.jl")
 include("SREFourier.jl")
-include("SwapMatrix.jl")
+include("WeightMatrix.jl")
 include("WeightReplicas.jl")
 include("Gaussian.jl")
 

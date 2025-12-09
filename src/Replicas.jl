@@ -62,7 +62,7 @@ end
 
 
 function init(M, L)
-    blocks = ones(L, L, M) / 2
+    blocks = ones(L, L, M)
     for j = 1:L
         for i = 1:j
             @view(blocks[i, j, 1]) .*= sign(i - j)
@@ -74,7 +74,7 @@ end
 
 
 function init2(M, L)
-    blocks = ones(L, L, M) / 2
+    blocks = ones(L, L, M)
     for k = 1:M
         for j = 1:L
             for i = 1:j
@@ -178,6 +178,10 @@ inv!(A) = LinearAlgebra.inv!(lu!(A))
 
 function Base.inv(A::ReplicaMatrix)
     temp = Array{ComplexF64, 3}(undef, A.L, A.L, A.M)
+    if isone(A.M)
+        temp[:, :, 1] = LinearAlgebra.inv(A.blocks[:, :, 1])
+        return ReplicaMatrix(A.M, A.L, temp, A.bfft_plan)
+    end
     phases = [exp(im * π * (m - 1) / A.M) for m = 1:A.M]
     Threads.@threads for i = 1:A.M
         @views mul!(temp[:, :, i], A.blocks[:, :, i], I, phases[i], 0)
