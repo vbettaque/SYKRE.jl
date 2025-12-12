@@ -124,8 +124,12 @@ end
 L = 1000
 ws = collect(0:2:100) / 100
 
-for β in [0.2, 0.5, 1.0, 2.0, 5.0]
+generate_1R2_weight_data(collect(68:2:100) / 100, L, 10.0, 2; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+
+
+for β in [10.0, 20.0, 50.0]
     for q in [2, 4, 6, 8]
+        β == 10.0 && q == 2 && continue
         generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
     end
 end
