@@ -1,23 +1,11 @@
-module WeightReplicas
+module WeightedReplicas
 
 using LinearAlgebra
-using BlockArrays
-using Plots
 
 using ..SYK
 using ..SYKMatrix
 using ..Replicas
 
-
-function plot_matrix(A::ReplicaMatrix; title="")
-    A_M = convert(Matrix{Float64}, A)
-    blue = RGB(0,101.0/255,1)
-    orange = RGB(1,154.0/255,0)
-    grad = cgrad([blue, :gray95, orange], [0.0, 0.5, 1.0])
-    p = heatmap(A_M, aspect_ratio = 1, clims=(-1.0, 1.0), yflip = true, color = grad, title=title)
-
-    display(p)
-end
 
 function propagtors(Σ::ReplicaMatrix, syk::SYKData)
     Δτ = syk.β / Σ.L
@@ -25,8 +13,8 @@ function propagtors(Σ::ReplicaMatrix, syk::SYKData)
     D_minus = Replicas.differentials(Σ.M, Σ.L; periodic = false)
     D_plus = Replicas.differentials(Σ.M, Σ.L; periodic = true)
 
-    prop_minus = D_minus - 2 * Δτ^2 * Σ
-	prop_plus = D_plus - 2 * Δτ^2 * Σ
+    prop_minus = D_minus - Δτ^2 * Σ
+	prop_plus = D_plus - Δτ^2 * Σ
 
     return prop_minus, prop_plus
 end
@@ -49,13 +37,12 @@ end
 function G_SD(Σ::ReplicaMatrix, w::Real, syk::SYKData)
     prop_minus, prop_plus = propagtors(Σ, syk)
     G = if iszero(w)
-        -2 * inv(prop_minus)'
+        -inv(prop_minus)'
     elseif isone(w)
-        -2 * inv(prop_plus)'
+        -inv(prop_plus)'
     else
-        -2 * (w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
+        -(w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
     end
-    # @views G.blocks[:, :, 1] -= Diagonal(G.blocks[:, :, 1])
     return G
 end
 
@@ -66,11 +53,8 @@ end
 
 
 function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-    # @assert iseven(syk.M) && syk.M == G_init.M
     @assert iseven(syk.q)
     @assert 0 ≤ w ≤ 1
-
-    # plot_matrix(G_init; title="G_init")
 
 	t = init_lerp
 
@@ -78,31 +62,33 @@ function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5
 	Σ = Σ_SD(G, syk)
 
     i = 1
-    println("Iteration ", i)
+
     G_new = G_SD(Σ, w, syk)
+    G_lerp = Replicas.init(G_init.M, G_init.L)
 
     err = frobenius(G_new - G) / frobenius(G)
+
+    @info "Iteration $(i)" rel_error = err lerp = t
 
 	while i <= max_iters
 		G_lerp = t * G_new + (1 - t) * G
 
 		err_new = frobenius(G_lerp - G) / frobenius(G)
-        println("err_new = ", err_new)
+
 		if err_new < tol
             G = G_lerp
             Σ = Σ_SD(G, syk)
-            println("Converged after ", i, " iterations")
+            @info "Converged after $(i) iterations"
             break
         end
 
 		if (err_new > err)
-            println("Relative error increased, trying again...")
+            @info "Relative error increased to $(err_new), trying again..."
             t /= lerp_divisor
             continue
         end
 
         err = err_new
-        println("err = ", err, ", t = ", t)
 
 		G = G_lerp
         Σ = Σ_SD(G, syk)
@@ -110,15 +96,15 @@ function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5
         i += 1
 
         if i > max_iters
-            println("Exceeded iterations!")
+            @warn "Exceeded iterations!"
             break
         end
 
-        println("Iteration ", i)
+        @info "Iteration $(i)" rel_error = err lerp = t
         G_new = G_SD(Σ, w, syk)
 	end
 
-    plot_matrix(G; title="w = $(w), β = $(syk.β)")
+    # plot_matrix(G; title="w = $(w), β = $(syk.β)")
 
 	return G, Σ
 end
@@ -127,20 +113,23 @@ end
 function action(G::ReplicaMatrix, Σ::ReplicaMatrix, w, syk::SYKData)
     Δτ = syk.β / G.L
 
-    pfaff_minus, pfaff_plus = pfaffians(Σ, syk)
-    println("pf_minus = ", pfaff_minus)
-    println("pf_plus = ", pfaff_plus)
+    pf_minus, pf_plus = pfaffians(Σ, syk)
+    @debug pf_minus, pf_plus
+
     prop_term = if iszero(w)
-        -log(pfaff_minus)
+        -log(pf_minus)
     elseif isone(w)
-        -log(pfaff_plus)
+        -log(pf_plus)
     else
-        -(w * log(pfaff_plus) + (1 - w) * log(pfaff_minus))
+        -(w * log(pf_plus) + (1 - w) * log(pf_minus))
     end
-    println("prop_term = ", prop_term)
     on_shell_term = 1/2 * syk.J^2 * (1 - 1/syk.q) * Δτ^2 * sum(x -> x^syk.q, G)
-    println("on_shell_term = ", on_shell_term)
-    return syk.N * (prop_term + on_shell_term)
+    @debug prop_term, on_shell_term
+
+    action = syk.N * (prop_term + on_shell_term)
+    @debug action
+
+    return action
 end
 
 
