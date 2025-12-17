@@ -7,54 +7,72 @@ using SYKRE.SREMatrix
 using SYKRE.SYKFourier
 using SYKRE.SREFourier
 using SYKRE.WeightMatrix
-using .Replicas
+using SYKRE.Replicas
 
 
-# 1R2
+function plot_1R2_weighted(β, qs, L, save=false)
+    data = []
+    for q in qs
+        push!(data, CSV.File("data/paper/weighted/1R2/weighted_1R2_beta$(β)_q$(q)_L$(L).csv") |> DataFrame)
+    end
 
-# beta = 0.1
+    # -I(w)
 
-weight_1R2_beta01_q2 = CSV.File("data/paper/weights/1R2/weight_1R2_beta0.1_q2_L1000.csv") |> DataFrame
-weight_1R2_beta01_q4 = CSV.File("data/paper/weights/1R2/weight_1R2_beta0.1_q4_L1000.csv") |> DataFrame
-weight_1R2_beta01_q6 = CSV.File("data/paper/weights/1R2/weight_1R2_beta0.1_q6_L1000.csv") |> DataFrame
-weight_1R2_beta01_q8 = CSV.File("data/paper/weights/1R2/weight_1R2_beta0.1_q8_L1000.csv") |> DataFrame
+    p = plot()
 
-# -I(w)
+    for i in eachindex(qs)
+        plot!(data[i][:,1], data[i][:,2], label="\$q = $(qs[i])\$")
+    end
 
-p = plot(weight_1R2_beta01_q2[:,1], weight_1R2_beta01_q2[:,2], label="\$q = 2\$")
-plot!(weight_1R2_beta01_q4[:,1], weight_1R2_beta01_q4[:,2], label="\$q = 4\$")
-plot!(weight_1R2_beta01_q6[:,1], weight_1R2_beta01_q6[:,2], label="\$q = 6\$")
-plot!(weight_1R2_beta01_q8[:,1], weight_1R2_beta01_q8[:,2], label="\$q = 8\$")
+    xlabel!("\$w\$")
+    ylabel!("\$-I(w)\$")
 
-xlabel!("\$w\$")
-ylabel!("\$-I(w)\$")
+    title!("1R2 (\$ \\beta = $(β)\$)")
 
-title!("1R2 (\$ \\beta = 0.1\$)")
+    display(p)
+    save && savefig("figures/weighted_syk/1R2/weighted_action_1R2_beta$(β)_L$(L).pdf")
 
-# -I(w) + H(w)
+    # -I(w) + H(w)
 
-p = plot(weight_1R2_beta01_q2[:,1], weight_1R2_beta01_q2[:,2] + weight_1R2_beta01_q2[:,6], label="\$q = 2\$")
-plot!(weight_1R2_beta01_q4[:,1], weight_1R2_beta01_q4[:,2] + weight_1R2_beta01_q4[:,6], label="\$q = 4\$")
-plot!(weight_1R2_beta01_q6[:,1], weight_1R2_beta01_q6[:,2] + weight_1R2_beta01_q6[:,6], label="\$q = 6\$")
-plot!(weight_1R2_beta01_q8[:,1], weight_1R2_beta01_q8[:,2] + weight_1R2_beta01_q8[:,6], label="\$q = 8\$")
+    p = plot()
 
-xlabel!("\$w\$")
-ylabel!("\$-I(w) + H(w)\$")
+    for i in eachindex(qs)
+        plot!(data[i][:,1], data[i][:,2] + data[i][:,6], label="\$q = $(qs[i])\$")
+    end
 
-title!("1R2 (\$ \\beta = 0.1\$)")
+    xlabel!("\$w\$")
+    ylabel!("\$-I(w) + H(w)\$")
 
-# p_+
+    title!("1R2 (\$ \\beta = $(β)\$)")
 
-p = plot(weight_1R2_beta01_q2[:,1], weight_1R2_beta01_q2[:,5], label="\$q = 2\$")
-plot!(weight_1R2_beta01_q4[:,1], weight_1R2_beta01_q4[:,5], label="\$q = 4\$")
-plot!(weight_1R2_beta01_q6[:,1], weight_1R2_beta01_q6[:,5], label="\$q = 6\$")
-plot!(weight_1R2_beta01_q8[:,1], weight_1R2_beta01_q8[:,5], label="\$q = 8\$")
-plot!(weight_1R2_beta01_q8[:,1], weight_1R2_beta01_q8[:,1], label="\$w\$")
+    display(p)
+    save && savefig("figures/weighted_syk/1R2/weighted_action_entropy_1R2_beta$(β)_L$(L).pdf")
 
-ylims!(0, 0.4)
+    # -p_plus
 
-xlabel!("\$w\$")
-ylabel!("\$p_+(w)\$")
+    p = plot()
 
-title!("1R2 (\$ \\beta = 0.1\$)")
+    for i in eachindex(qs)
+        plot!(data[i][:,1], data[i][:,5], label="\$q = $(qs[i])\$")
+    end
 
+    plot!(data[1][:,1], data[1][:,1], color=:grey, label="\$w\$")
+
+    xlabel!("\$w\$")
+    ylabel!("\$p_+\$")
+
+    title!("1R2 (\$ \\beta = $(β)\$)")
+
+    display(p)
+    save && savefig("figures/weighted_syk/1R2/weighted_p_plus_1R2_beta$(β)_L$(L).pdf")
+end
+
+plot_1R2_weighted(0.1, [2, 4, 6, 8], 1000, true)
+plot_1R2_weighted(0.2, [2, 4, 6, 8], 1000, true)
+plot_1R2_weighted(0.5, [2, 4, 6, 8], 1000, true)
+plot_1R2_weighted(1.0, [2, 4, 6, 8], 1000, true)
+plot_1R2_weighted(2.0, [2, 4, 6, 8], 1000, true)
+plot_1R2_weighted(5.0, [2, 4, 6, 8], 1000, true)
+plot_1R2_weighted(10.0, [2, 4, 6, 8], 1000, true)
+plot_1R2_weighted(20.0, [2, 4, 6, 8], 1000, true)
+plot_1R2_weighted(50.0, [2, 4, 6, 8], 1000, true)
