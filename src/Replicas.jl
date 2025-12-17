@@ -4,6 +4,7 @@ import Base: +, -, *, /, adjoint, transpose, convert, show, abs, inv, sum
 using FFTW
 using LinearAlgebra
 using Base.Threads
+using Plots
 
 export ReplicaMatrix, block_diagonalize, det, frobenius
 
@@ -12,6 +13,17 @@ struct ReplicaMatrix
     L::Int
     blocks::Array{Float64, 3} # (L, L, M)
     bfft_plan::FFTW.Plan
+end
+
+
+function plot(A::ReplicaMatrix; title="")
+    A_M = convert(Matrix{Float64}, A)
+    blue = RGB(0,101.0/255,1)
+    orange = RGB(1,154.0/255,0)
+    grad = cgrad([blue, :gray95, orange], [0.0, 0.5, 1.0])
+    p = heatmap(A_M, aspect_ratio = 1, clims=(-0.5, 0.5), yflip = true, color = grad, title=title)
+
+    display(p)
 end
 
 
@@ -62,24 +74,10 @@ end
 
 
 function init(M, L)
-    blocks = ones(L, L, M)
+    blocks = ones(L, L, M) ./ 2
     for j = 1:L
         for i = 1:j
             @view(blocks[i, j, 1]) .*= sign(i - j)
-        end
-    end
-    bfft_plan = plan_bfft!(ComplexF64.(blocks), 3; flags=FFTW.EXHAUSTIVE, timelimit=Inf)
-    return ReplicaMatrix(M, L, blocks, bfft_plan)
-end
-
-
-function init2(M, L)
-    blocks = ones(L, L, M)
-    for k = 1:M
-        for j = 1:L
-            for i = 1:j
-                @view(blocks[i, j, k]) .*= sign(i - j)
-            end
         end
     end
     bfft_plan = plan_bfft!(ComplexF64.(blocks), 3; flags=FFTW.EXHAUSTIVE, timelimit=Inf)
@@ -199,6 +197,9 @@ end # 95.62 MiB, allocs estimate: 122
 
 
 function det(A::ReplicaMatrix)
+    if isone(A.M)
+        return LinearAlgebra.det(@view(A.blocks[:, :, 1]))
+    end
     diag = block_diagonalize(A)
     det = 1
     for i = 1:A.M
