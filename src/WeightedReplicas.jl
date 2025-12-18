@@ -10,8 +10,8 @@ using ..Replicas
 function propagtors(Σ::ReplicaMatrix, syk::SYKData)
     Δτ = syk.β / Σ.L
 
-    D_minus = Replicas.differentials(Σ.M, Σ.L; periodic = false)
-    D_plus = Replicas.differentials(Σ.M, Σ.L; periodic = true)
+    D_minus = Replicas.differentials(Σ.R, Σ.L; periodic = false)
+    D_plus = Replicas.differentials(Σ.R, Σ.L; periodic = true)
 
     prop_minus = D_minus - Δτ^2 * Σ
 	prop_plus = D_plus - Δτ^2 * Σ
@@ -64,7 +64,7 @@ function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5
     i = 1
 
     G_new = G_SD(Σ, w, syk)
-    G_lerp = Replicas.init(G_init.M, G_init.L)
+    G_lerp = Replicas.init(G_init.R, G_init.L)
 
     err = frobenius(G_new - G) / frobenius(G)
 
@@ -103,8 +103,6 @@ function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5
         @info "Iteration $(i)" rel_error = err lerp = t
         G_new = G_SD(Σ, w, syk)
 	end
-
-    # plot_matrix(G; title="w = $(w), β = $(syk.β)")
 
 	return G, Σ
 end

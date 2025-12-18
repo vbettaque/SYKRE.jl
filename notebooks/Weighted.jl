@@ -1,4 +1,4 @@
-using CSV, DataFrames, Statistics, Plots, LinearAlgebra, FFTW, Latexify, BlockArrays, Combinatorics, BenchmarkTools
+using CSV, DataFrames, Statistics, Plots, LinearAlgebra, FFTW, Latexify, BlockArrays, Combinatorics, BenchmarkTools, Profile
 
 using SYKRE
 using SYKRE.SYK
@@ -24,7 +24,7 @@ function generate_2R1_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
     path = "data/weighted/2R1/"
     filename = "weighted_2R1" * "_beta" * string(β) * "_q" * string(q) * "_L" * string(L) * ".csv"
     file = path * filename
-    !ispath(path) && mkdir(path)
+    !ispath(path) && mkpath(path)
     if !isfile(file)
         touch(file)
         write(file, "weight,saddle,pf_minus,pf_plus,p_plus,entropy\n")
@@ -48,8 +48,6 @@ function generate_2R1_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
         p_plus = pf_plus / (pf_plus + pf_minus)
         entropy = binary_entropy(w)
 
-
-
         df = DataFrame(weight = w, saddle = saddle, pf_minus = pf_minus, pf_plus = pf_plus, p_plus = p_plus, entropy = entropy)
 
         CSV.write(file, df, append=true)
@@ -68,7 +66,7 @@ function generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
     path = "data/weighted/1R2/"
     filename = "weight_1R2" * "_beta" * string(β) * "_q" * string(q) * "_L" * string(L) * ".csv"
     file = path * filename
-    !ispath(path) && mkdir(path)
+    !ispath(path) && mkpath(path)
     if !isfile(file)
         touch(file)
         write(file, "weight,saddle,pf_minus,pf_plus,p_plus,entropy\n")
@@ -92,7 +90,7 @@ function generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
 
         df = DataFrame(weight = w, saddle = saddle, pf_minus = pf_minus, pf_plus = pf_plus, p_plus = p_plus, entropy = entropy)
 
-        # Replicas.plot(G_temp, title = "β = $(β), w = $(w)")
+        Replicas.plot(G_temp, title = "β = $(β), w = $(w)")
 
         CSV.write(file, df, append=true)
     end
@@ -119,7 +117,7 @@ function generate_1R4a_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor =
     path = "data/paper/weighted/1R4a/"
     filename = "weight_1R4a" * "_beta" * string(β) * "_q" * string(q) * "_L" * string(L) * ".csv"
     file = path * filename
-    !ispath(path) && mkdir(path)
+    !ispath(path) && mkpath(path)
     if !isfile(file)
         touch(file)
         write(file, "weight,saddle,pf_minus,pf_plus,p_plus,entropy\n")
@@ -127,7 +125,7 @@ function generate_1R4a_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor =
 
     for i in eachindex(ws)
         w = ws[i]
-        println(i, " out of ", length(ws), ": w = ", w)
+        @info "$(i) out of $(length(ws)): w = $(w)"
 
         saddle = 0
         pf_minus = 0
@@ -135,9 +133,9 @@ function generate_1R4a_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor =
         p_plus = 0
         entropy = 0
 
-        G_temp, Σ_temp = WeightReplicas.schwinger_dyson(G_init, w, syk; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
-        saddle = WeightReplicas.log2_saddle(G_temp, Σ_temp, w, syk)
-        pf_minus, pf_plus = WeightReplicas.pfaffians(Σ_temp, syk)
+        G_temp, Σ_temp = WeightedReplicas.schwinger_dyson(G_init, w, syk; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
+        saddle = WeightedReplicas.log2_saddle(G_temp, Σ_temp, w, syk)
+        pf_minus, pf_plus = WeightedReplicas.pfaffians(Σ_temp, syk)
         p_plus = pf_plus / (pf_plus + pf_minus)
         entropy = binary_entropy(w)
 
@@ -149,15 +147,14 @@ function generate_1R4a_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor =
 end
 
 
-L = 1500
+L = 1000
 ws = collect(0:2:100) / 100
 
+generate_1R2_weight_data(collect(76:2:100) / 100, L, 1.0, 8; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
-generate_1R2_weight_data([0.5], L, 20.0, 4; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
-# for β in [10.0, 20.0, 50.0]
-#     for q in [2, 4, 6, 8]
-#         β == 10.0 && q == 2 && continue
-#         generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-#     end
-# end
+for β in [2.0, 5.0, 10.0, 20.0, 50.0]
+    for q in [2, 4, 6, 8]
+        generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+    end
+end
