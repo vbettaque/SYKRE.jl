@@ -1,11 +1,38 @@
-using CSV, DataFrames, Statistics, Plots, LinearAlgebra, FFTW, Latexify, BlockArrays, Combinatorics, BenchmarkTools, Profile
+#!/usr/bin/env julia
 
-using SYKRE
-using SYKRE.SYK
-using SYKRE.Replicas
-using SYKRE.WeightedReplicas
+#SBATCH --job-name=1R4ab5
+##SBATCH -p <list of partition names>
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem-per-cpu=4G
+#SBATCH --time=1-00:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=vbettaque@brandeis.edu
 
-function binary_entropy(w)
+import Pkg
+Pkg.add(path="..")
+
+using Distributed
+
+
+L = 1000
+ws = collect(0:2:100) / 100
+β = 5.0
+qs = [2, 4, 6, 8]
+
+addprocs(4; exeflags="--project")
+
+@everywhere using Logging, CSV, DataFrames
+
+@everywhere using SYKRE
+@everywhere using SYKRE.SYK
+@everywhere using SYKRE.Replicas
+@everywhere using SYKRE.WeightedReplicas
+
+@everywhere Logging.disable_logging(Logging.Info)
+
+@everywhere function binary_entropy(w)
     @assert 0 ≤ w ≤ 1
     if iszero(w) || isone(w)
         return 0
@@ -13,7 +40,7 @@ function binary_entropy(w)
     return - w * log2(w) - (1 - w) * log2(1 - w)
 end
 
-function generate_2R1_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+@everywhere function generate_2R1_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
     G_init = Replicas.init(1, L)
 
     syk = SYKData(1, 1, q, 1, β)
@@ -32,7 +59,7 @@ function generate_2R1_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
 
     for i in eachindex(ws)
         w = ws[i]
-        println(i, " out of ", length(ws), ": w = ", w)
+        @logmsg Logging.LogLevel(1) "$(i) out of $(length(ws)): w = $(w)"
 
         saddle = 0
         pf_minus = 0
@@ -48,6 +75,8 @@ function generate_2R1_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
         p_plus = pf_plus / (pf_plus + pf_minus)
         entropy = binary_entropy(w)
 
+
+
         df = DataFrame(weight = w, saddle = saddle, pf_minus = pf_minus, pf_plus = pf_plus, p_plus = p_plus, entropy = entropy)
 
         CSV.write(file, df, append=true)
@@ -55,7 +84,7 @@ function generate_2R1_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
 
 end
 
-function generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+@everywhere function generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
     G_init = Replicas.init(2, L)
 
     syk = SYKData(1, 1, q, 2, β)
@@ -64,7 +93,7 @@ function generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
     Σ_temp = Replicas.init(2, L)
 
     path = "data/weighted/1R2/"
-    filename = "weight_1R2" * "_beta" * string(β) * "_q" * string(q) * "_L" * string(L) * ".csv"
+    filename = "weighted_1R2" * "_beta" * string(β) * "_q" * string(q) * "_L" * string(L) * ".csv"
     file = path * filename
     !ispath(path) && mkpath(path)
     if !isfile(file)
@@ -74,7 +103,7 @@ function generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
 
     for i in eachindex(ws)
         w = ws[i]
-        @info "$(i) out of $(length(ws)): w = $(w)"
+        @logmsg Logging.LogLevel(1) "$(i) out of $(length(ws)): w = $(w)"
 
         saddle = 0
         pf_minus = 0
@@ -90,15 +119,14 @@ function generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
 
         df = DataFrame(weight = w, saddle = saddle, pf_minus = pf_minus, pf_plus = pf_plus, p_plus = p_plus, entropy = entropy)
 
-        Replicas.plot(G_temp, title = "β = $(β), w = $(w)")
+        # Replicas.plot(G_temp, title = "β = $(β), w = $(w)")
 
         CSV.write(file, df, append=true)
     end
 
 end
 
-
-function generate_1R4a_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+@everywhere function generate_1R4a_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
     # G_init_single = Replicas.init(1, 4*L)
     # G_init_single, _ = WeightReplicas.schwinger_dyson(G_init_single, 0.0, SYKData(1, 1, q, 1, 4*β); init_lerp = 0.1, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
 
@@ -114,8 +142,8 @@ function generate_1R4a_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor =
     G_temp = Replicas.init(4, L)
     Σ_temp = Replicas.init(4, L)
 
-    path = "data/paper/weighted/1R4a/"
-    filename = "weight_1R4a" * "_beta" * string(β) * "_q" * string(q) * "_L" * string(L) * ".csv"
+    path = "data/weighted/1R4a/"
+    filename = "weighted_1R4a" * "_beta" * string(β) * "_q" * string(q) * "_L" * string(L) * ".csv"
     file = path * filename
     !ispath(path) && mkpath(path)
     if !isfile(file)
@@ -125,7 +153,7 @@ function generate_1R4a_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor =
 
     for i in eachindex(ws)
         w = ws[i]
-        @info "$(i) out of $(length(ws)): w = $(w)"
+        @logmsg Logging.LogLevel(1) "$(i) out of $(length(ws)): w = $(w)"
 
         saddle = 0
         pf_minus = 0
@@ -146,15 +174,10 @@ function generate_1R4a_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor =
 
 end
 
+@sync @distributed for i in 1:4
+    remotecall_fetch(generate_1R4a_weight_data, i, ws, L, β, qs[i]; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+end
 
-L = 1000
-ws = collect(0:2:100) / 100
-
-generate_1R4a_weight_data(collect(76:2:100) / 100, L, 1.0, 8; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-
-
-for β in [2.0, 5.0, 10.0, 20.0, 50.0]
-    for q in [2, 4, 6, 8]
-        generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-    end
+for i in workers()
+    rmprocs(i)
 end
