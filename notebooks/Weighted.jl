@@ -160,14 +160,16 @@ generate_1R4a_weight_data(collect(76:2:100) / 100, L, 1.0, 8; init_lerp = 0.01, 
 # end
 
 
-for β in [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
-    for q in [2, 4, 6, 8]
-        df = CSV.File("data/weighted/1R2/weighted_1R2_beta$(β)_q$(q)_L1000.csv") |> DataFrame
-        df[:, 6] ./= log(2, ℯ)
-        path = "data/weighted/1R2_new/"
-        filename = "weighted_1R2_beta$(β)_q$(q)_L1000.csv"
-        file = path * filename
-        !ispath(path) && mkpath(path)
-        CSV.write(file, df, append=true)
-    end
-end
+# for β in [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
+#     for q in [2, 4, 6, 8]
+#         df = CSV.File("data/weighted/1R4a_log2/weighted_1R4a_beta$(β)_q$(q)_L1000.csv") |> DataFrame
+#         df[:, 2] ./= log(2, ℯ)
+#         df[:, 6] ./= log(2, ℯ)
+#         path = "data/weighted/1R4a/"
+#         filename = "weighted_1R4a_beta$(β)_q$(q)_L1000.csv"
+#         file = path * filename
+#         !ispath(path) && mkpath(path)
+#         custom_headers = ["weight", "saddle", "pf_minus", "pf_plus", "p_plus", "entropy"]
+#         CSV.write(file, df, header=custom_headers)
+#     end
+# end
