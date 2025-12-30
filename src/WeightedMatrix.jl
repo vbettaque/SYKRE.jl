@@ -1,4 +1,4 @@
-module WeightMatrix
+module WeightedMatrix
 
 using LinearAlgebra
 using BlockArrays

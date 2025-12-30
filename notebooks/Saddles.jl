@@ -5,11 +5,10 @@ using SYKRE.SYK
 using SYKRE.SYKMatrix
 using SYKRE.SREMatrix
 using SYKRE.SYKFourier
-using SYKRE.SREFourier
 using SYKRE.Replicas
-using SYKRE.WeightReplicas
+using SYKRE.WeightedReplicas
 using SYKRE.PurityReplicas
-using SYKRE.WeightMatrix
+using SYKRE.WeightedMatrix
 
 N = 1
 J = 1
@@ -34,7 +33,7 @@ G_init = Replicas.init(R, L)
 #     @views G_init.blocks[:, :, i] = G_single.blocks[row_range, 1:L, 1]
 # end
 
-WeightReplicas.plot_matrix(G_init; title="")
+WeightedReplicas.plot_matrix(G_init; title="")
 
 
 for p in powervec([0, 1, -1], R÷2)
