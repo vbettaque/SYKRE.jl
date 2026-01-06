@@ -10,6 +10,7 @@ include("PurityReplicas.jl")
 include("SYKFourier.jl")
 include("WeightedMatrix.jl")
 include("WeightedReplicas.jl")
+include("TFDReplicas.jl")
 include("Gaussian.jl")
 
 end

@@ -8,6 +8,10 @@ using LinearAlgebra
 using BlockArrays
 using Random
 using Combinatorics
+using Plots
+using Plots.PlotMeasures
+using CSV
+using Tables
 
 
 powervec(ss, n) = Iterators.product(ntuple(i->ss, n)...)
@@ -137,8 +141,8 @@ end
 N = 1
 J = 1
 q = 4
-β = 20
-L = 1000
+β = 10
+L = 500
 w = 0.5
 
 R = 8
@@ -155,3 +159,81 @@ for rep in get_unique_reps(R)
     log_saddle = WeightedReplicas.log_saddle(G, Σ, w, syk)
     Replicas.plot(G; title="log_saddle = $(log_saddle)")
 end
+
+# rep_plots = []
+# for r = 1:R
+#     p = heatmap(G.blocks[:, :, r], aspect_ratio=:equal, yflip = true, cb=false, axis=false, xticks=false, yticks=false, margins=-2mm, framestyle=:none, frame=false, size=(L,L))
+#     push!(rep_plots, p)
+# end
+
+# plots = []
+# for i = 1:R
+#     for j = 1:R
+#         idx = mod(i - j, R) + 1
+#         sgn = (i == j) ? 1 : sign(i - j)
+#         push!(plots, rep_plots[idx])
+#     end
+# end
+# plot(plots..., layout=(R, R), spacing=(0,0))
+
+# N = 1
+# J = 1
+# q = 4
+# β = 50
+# L = 1000
+# w = 0.5
+
+# R = 2
+
+# syk = SYKData(N, J, q, R, β)
+
+# G_init = Replicas.init(R, L)
+# G, Σ = WeightedReplicas.schwinger_dyson(G_init, w, syk; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+
+# Replicas.plot(G; title="q = $(q), β = $(β), w = $(w)")
+
+# blue = RGB(0,101.0/255,1)
+# orange = RGB(1,154.0/255,0)
+# grad = cgrad([blue, :gray95, orange], [0.0, 0.5, 1.0])
+# p = heatmap(G.blocks[:, :, 2], aspect_ratio = 1, clims=(-0.5, 0.5), yflip = true, color = grad, title="G_21 (q = $(q), β = $(β), w = $(w))")
+
+
+# CSV.write("G_21_q$(q)_beta$(β)_w$(w)_L$(L).csv",  Tables.table(G.blocks[:, :, 2]), writeheader=false)
+
+
+# R = 6
+# r = [1, 1, 0, -1, 0, 1]
+
+R = 2
+N = 1
+J = 1
+q = 4
+β = 50
+L = 1000
+w = 0
+
+
+syk = SYKData(N, J, q, R, β)
+
+G_init = Replicas.init(R, L)
+
+Replicas.plot(G_init; title="$(r)")
+G, Σ = WeightedReplicas.schwinger_dyson(G_init, w, syk; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+log_saddle = WeightedReplicas.log_saddle(G, Σ, w, syk)
+purity = log_saddle - w * log(w) - (1-w) * log(1-w) - log(2)/2
+Replicas.plot(G; title="q = $(q), beta = $(β)")
+
+blue = RGB(0,101.0/255,1)
+orange = RGB(1,154.0/255,0)
+grad = cgrad([blue, :gray95, orange], [0.0, 0.5, 1.0])
+p = heatmap(G.blocks[:, :, 2], aspect_ratio = 1, clims=(-0.5, 0.5), yflip = true, color = grad, title="G_21 (q = $(q), β = $(β), w = $(w))")
+
+G.blocks[1, 1, 2]
+G.blocks[1, L, 2]
+
+syk = SYKData(N, J, q, 1, 2*β)
+G_init = Replicas.init(1, 2*L)
+Replicas.plot(G_init; title="$(r)")
+G, Σ = WeightedReplicas.schwinger_dyson(G_init, 0, syk; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+log_saddle = WeightedReplicas.log_saddle(G, Σ, 0, syk)
+Replicas.plot(G; title="β = $(β), w = $(w), saddle = $(log_saddle)")
