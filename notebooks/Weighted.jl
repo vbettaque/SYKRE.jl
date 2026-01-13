@@ -147,10 +147,54 @@ function generate_1R4a_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor =
 end
 
 
-L = 1000
-ws = collect(0:2:100) / 100
+function generate_1R4b_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+    G_init = Replicas.init(4, L)
+    G_init.blocks[:, :, 2:4] .*= rand(Float64, (L, L, 3))
 
-generate_1R4a_weight_data(collect(76:2:100) / 100, L, 1.0, 8; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+    syk = SYKData(1, 1, q, 4, β)
+
+    G_temp = Replicas.init(4, L)
+    Σ_temp = Replicas.init(4, L)
+
+    path = "data/weighted/1R4b/"
+    filename = "weighted_1R4b" * "_beta" * string(β) * "_q" * string(q) * "_L" * string(L) * ".csv"
+    file = path * filename
+    !ispath(path) && mkpath(path)
+    if !isfile(file)
+        touch(file)
+        write(file, "weight,saddle,pf_minus,pf_plus,p_plus,entropy\n")
+    end
+
+    for i in eachindex(ws)
+        w = ws[i]
+        @info "$(i) out of $(length(ws)): w = $(w)"
+
+        saddle = 0
+        pf_minus = 0
+        pf_plus = 0
+        p_plus = 0
+        entropy = 0
+
+        G_temp, Σ_temp = WeightedReplicas.schwinger_dyson(G_init, w, syk; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
+        saddle = WeightedReplicas.log_saddle(G_temp, Σ_temp, w, syk)
+        pf_minus, pf_plus = WeightedReplicas.pfaffians(Σ_temp, syk)
+        p_plus = pf_plus / (pf_plus + pf_minus)
+        entropy = binary_entropy(w)
+
+        Replicas.plot(G_temp)
+
+        df = DataFrame(weight = w, saddle = saddle, pf_minus = pf_minus, pf_plus = pf_plus, p_plus = p_plus, entropy = entropy)
+
+        CSV.write(file, df, append=true)
+    end
+end
+
+β = 10.0
+q = 4
+L = 1000
+ws = [0.02]
+
+generate_1R4b_weight_data(ws, L, β, q; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
 
 # for β in [2.0, 5.0, 10.0, 20.0, 50.0]
