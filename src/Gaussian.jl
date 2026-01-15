@@ -81,7 +81,7 @@ function full_sample(Γ, α=1)
     ps[1] = (1 / purity)^α
     counts[1] = 1
 
-    Threads.@threads for i = 2:2^(N - 1)
+    Threads.@threads for i = 1:2^(N - 1)
         v =  indexed_even_bitvec(i, N)
         v_bit = isone.(v)
         w = Int(sum(v))

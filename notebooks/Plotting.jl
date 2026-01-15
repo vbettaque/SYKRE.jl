@@ -286,8 +286,6 @@ function plot_R4_weighted(β, q, L, save_fig=false)
     # save && savefig("figures/weighted/1R4a/weighted_p_plus_1R4a_beta$(β)_L$(L).pdf")
 end
 
- plot_R4_weighted(10.0, 6, 1000, false)
-
 # plot_1R2_weighted(0.1, [2, 4], 1000, true)
 # plot_1R2_weighted(0.2, [2, 4], 1000, true)
 # plot_1R2_weighted(0.5, [2, 4, 6, 8], 1000, true)
@@ -314,3 +312,5 @@ end
 # plot_1_norm(20.0, [2, 4, 6, 8], 1000, false)
 
 # plot_1R2_comparison(10., 4, 1000, false)
+
+plot_R4_weighted(50.0, 4, 1000, false)
