@@ -379,3 +379,5 @@ plot_R4_weighted_single_q(50.0, 8, 1000, true, true, false, true)
 # plot_1_norm(20.0, [2, 4, 6, 8], 1000, false)
 
 # plot_1R2_comparison(10., 4, 1000, false)
+
+plot_R4_weighted(50.0, 4, 1000, false)

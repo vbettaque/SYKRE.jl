@@ -1,11 +1,10 @@
-using CSV, DataFrames, Statistics, Plots, LinearAlgebra, FFTW, Latexify, ProgressMeter
+using CSV, DataFrames, Statistics, CairoMakie, LinearAlgebra, FFTW, Latexify, ProgressMeter
 
 using SYKRE
 using SYKRE.SYK
 using SYKRE.SYKMatrix
 using SYKRE.SREMatrix
 using SYKRE.SYKFourier
-using SYKRE.SREFourier
 using SYKRE.Gaussian
 
 
@@ -39,29 +38,33 @@ using SYKRE.Gaussian
 
 ##############
 
-N = 20
+N = 50
 J = 1
-β = 10
-α = 1
+β = 50
+α = 2
 
-samples = 100
+samples = 1000000
 progress = Progress(samples)
 
+Γ = Gaussian.rand_covariance(N, β, J)
+
+purity = det(Γ)
+
 ps_avg = zeros(N + 1)
-counts_avg = zeros(N + 1)
+counts = zeros(N + 1)
+
+ps_avg[1] = (1 / purity)^α
+counts[1] = 1
 
 for i = 1:samples
-    Γ = Gaussian.rand_covariance(N, β, J)
-    ps, counts = Gaussian.full_sample(Γ, α)
-    global ps_avg += ps
-    global counts_avg += counts
-    update!(progress, i)
+    p, v = Gaussian.sample_probability(Γ)
+    w = Int(sum(v))
+    iszero(w) && @info("Identity!")
+    global ps_avg[w+1] += p^α
+    global counts[w+1] += 1
+    ProgressMeter.update!(progress, i)
 end
 
-ps_avg ./= samples
-counts_avg ./= samples
+ps_avg ./= counts
 
-p = bar(0:2:N, log2.(ps_avg[1:2:N+1] ./ counts_avg[1:2:N+1]))
-xlabel!("w")
-ylabel!("log2(avg prob(w))")
-display(p)
+p = barplot(0:2:N, log.(binomial.(N, 0:2:N) .* ps_avg[1:2:N+1]) / N)
