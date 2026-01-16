@@ -85,7 +85,7 @@ function generate_extremized_purity_data(βs, q, L; init_lerp = 0.5, lerp_diviso
             G_2, Σ_2 = WeightedReplicas.schwinger_dyson(G_init_2, w, syk_2; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
             return -(WeightedReplicas.log_saddle(G_2, Σ_2, w, syk_2) + binary_entropy(w) - 2 * log_Z - log(2)/2)
         end
-        w_crit = gss(f, 0, 0.5, 1e-3)
+        w_crit = gss(f, 0.0, 0.5, 1e-3)
 
         @info "Computing log_purity at w_crit"
         log_purity = f(w_crit)
@@ -176,8 +176,8 @@ end
 L = 1000
 βs = range(0.5, step=0.5, stop=20)
 
-generate_extremized_purity_data(βs, 4, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-generate_extremized_purity_data(βs, 2, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+# generate_extremized_purity_data(βs, 6, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+generate_extremized_purity_data(βs, 8, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 # generate_ordinary_purity_data(βs, q, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
 # generate_purity_data_from_w_crit(4, 1000; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)

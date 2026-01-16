@@ -178,7 +178,7 @@ function plot_1R2_comparison(β, q, L, save=false)
     save && savefig("figures/weighted/1R2/weighted_action_1R2_beta$(β)_L$(L).pdf")
 end
 
-function plot_R4_weighted(β, q, L, save_fig=false)
+function plot_R4_weighted_single_q(β, q, L, plot_2R2 = true, plot_1R4a = true, plot_1R4b = true, save_fig=false)
     inch = 96
     pt = 4/3
     cm = inch / 2.54
@@ -187,7 +187,7 @@ function plot_R4_weighted(β, q, L, save_fig=false)
     height = 3 * width / 4
     font = 10pt
 
-    mkpath("figures/weighted/R4/")
+    mkpath("figures/weighted/R4/single_q/q$(q)")
 
     data_Z = CSV.File("data/partition_function/partition_function_q$(q)_L$(L).csv") |> DataFrame
     data_Z = data_Z[data_Z.beta .== β, :][1, :]
@@ -219,25 +219,25 @@ function plot_R4_weighted(β, q, L, save_fig=false)
     with_theme(theme_latexfonts()) do
         f = Figure(size = (width, height), figure_padding = (2, 1, -1, 1), fontsize = font)
         ax = Axis(f[1, 1],
-            title = L"\beta = %$(β), q = %$(q)",
+            # title = L"\beta = %$(β), q = %$(q)",
             xlabel = L"$w$",
             ylabel = L"$\ln\left(\overline{\xi(w)^4}\right) / N$",
         )
-        lines!(
+        plot_2R2 && lines!(
             ax,
             data_2R2[:,1],
             data_2R2[:,2] .- 4 * data_Z[2],
             color = Makie.wong_colors()[1],
             label= L"2R2"
         )
-        lines!(
+        plot_1R4a && lines!(
             ax,
             data_1R4a[:,1],
             data_1R4a[:,2] .- 4 * data_Z[2],
             color = Makie.wong_colors()[2],
             label= L"1R4a"
         )
-         lines!(
+        plot_1R4b && lines!(
             ax,
             data_1R4b[:,1],
             data_1R4b[:,2] .- 4 * data_Z[2],
@@ -248,26 +248,91 @@ function plot_R4_weighted(β, q, L, save_fig=false)
         axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0))
         resize_to_layout!(f)
         display(f)
-        save_fig && save("figures/weighted/R4/weighted_action_R4_beta$(β)_L$(L).pdf", f)
+        save_fig && save("figures/weighted/R4/single_q/q$(q)/weighted_action_R4_beta$(β)_q$(q)_L$(L).pdf", f)
     end
 
     # # -I(w) + H(w)
 
-    # p = plot()
+    with_theme(theme_latexfonts()) do
+        f = Figure(size = (width, height), figure_padding = (2, 1, -1, 1), fontsize = font)
+        ax = Axis(f[1, 1],
+            # title = L"\beta = %$(β), q = %$(q)",
+            xlabel = L"$w$",
+            ylabel = L"$\ln\left(\overline{\xi(w)^4}\right) / N + H(w)$",
+        )
+        plot_2R2 && lines!(
+            ax,
+            data_2R2[:,1],
+            data_2R2[:,2] .- 4 * data_Z[2] + data_2R2[:,6],
+            color = Makie.wong_colors()[1],
+            label= L"2R2"
+        )
+        plot_1R4a && lines!(
+            ax,
+            data_1R4a[:,1],
+            data_1R4a[:,2] .- 4 * data_Z[2] + data_1R4a[:,6],
+            color = Makie.wong_colors()[2],
+            label= L"1R4a"
+        )
+        plot_1R4b && lines!(
+            ax,
+            data_1R4b[:,1],
+            data_1R4b[:,2] .- 4 * data_Z[2] + data_1R4b[:,6],
+            color = Makie.wong_colors()[3],
+            label= L"1R4b"
+        )
 
-    # for i in eachindex(qs)
-    #     plot!(data[i][:,1], data[i][:,2] + data[i][:,6], label="\$q = $(qs[i])\$")
-    # end
-
-    # xlabel!("\$w\$")
-    # ylabel!("\$-I(w) + H(w)\$")
-
-    # title!("1R4a (\$ \\beta = $(β)\$)")
-
-    # display(p)
-    # save && savefig("figures/weighted/1R4a/weighted_action_entropy_1R4a_beta$(β)_L$(L).pdf")
+        axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0))
+        resize_to_layout!(f)
+        display(f)
+        save_fig && save("figures/weighted/R4/single_q/q$(q)/weighted_action_entropy_R4_beta$(β)_q$(q)_L$(L).pdf", f)
+    end
 
     # # -p_plus
+
+    with_theme(theme_latexfonts()) do
+        f = Figure(size = (width, height), figure_padding = (2, 1, -1, 1), fontsize = font)
+        ax = Axis(f[1, 1],
+            # title = L"\beta = %$(β), q = %$(q)",
+            xlabel = L"$w$",
+            ylabel = L"$p_+$",
+        )
+        plot_2R2 && lines!(
+            ax,
+            data_2R2[:,1],
+            data_2R2[:,5],
+            color = Makie.wong_colors()[1],
+            label= L"2R2"
+        )
+        plot_1R4a && lines!(
+            ax,
+            data_1R4a[:,1],
+            data_1R4a[:,5],
+            color = Makie.wong_colors()[2],
+            label= L"1R4a"
+        )
+        plot_1R4b && lines!(
+            ax,
+            data_1R4b[:,1],
+            data_1R4b[:,5],
+            color = Makie.wong_colors()[3],
+            label= L"1R4b"
+        )
+        lines!(
+            ax,
+            LinRange(0, 1, 100),
+            LinRange(0, 1, 100),
+            color = :gray,
+            linestyle = :dash,
+            label= L"$w$"
+        )
+        axislegend(position = :lt, rowgap = -5, padding = (6, 6, 0, 0))
+        max_p = max(data_2R2[end,5], data_1R4a[end,5], data_1R4b[end,5])
+        ylims!(-0.05 * max_p, 1.05 * max_p)
+        resize_to_layout!(f)
+        display(f)
+        save_fig && save("figures/weighted/R4/single_q/q$(q)/weighted_p_plus_R4_beta$(β)_q$(q)_L$(L).pdf", f)
+    end
 
     # p = plot()
 
@@ -285,8 +350,6 @@ function plot_R4_weighted(β, q, L, save_fig=false)
     # display(p)
     # save && savefig("figures/weighted/1R4a/weighted_p_plus_1R4a_beta$(β)_L$(L).pdf")
 end
-
- plot_R4_weighted(10.0, 6, 1000, false)
 
 # plot_1R2_weighted(0.1, [2, 4], 1000, true)
 # plot_1R2_weighted(0.2, [2, 4], 1000, true)
@@ -307,6 +370,8 @@ end
 # plot_1R4a_weighted(10.0, [2, 4, 6, 8], 1000, true)
 # plot_1R4a_weighted(20.0, [2, 4, 6, 8], 1000, true)
 # plot_1R4a_weighted(50.0, [2, 4, 6, 8], 1000, true)
+
+plot_R4_weighted_single_q(50.0, 8, 1000, true, true, false, true)
 
 # plot_1_norm(50.0, [2, 4, 6, 8], 1000, false)
 
