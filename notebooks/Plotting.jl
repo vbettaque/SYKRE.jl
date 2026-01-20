@@ -351,6 +351,240 @@ function plot_R4_weighted_single_q(β, q, L, plot_2R2 = true, plot_1R4a = true, 
     # save && savefig("figures/weighted/1R4a/weighted_p_plus_1R4a_beta$(β)_L$(L).pdf")
 end
 
+
+function plot_norm(qs, L, save_fig=false)
+    inch = 96
+    pt = 4/3
+    cm = inch / 2.54
+
+    invphi = (sqrt(5) - 1) / 2
+
+    width = 6.5inch
+    height = width * invphi
+    font = 12pt
+
+    mkpath("figures/norm_purity/")
+
+    data_norm = []
+    data_error = []
+
+    for i = eachindex(qs)
+        q = qs[i]
+        df_norm = CSV.File("data/norm/norm_q$(q)_L$(L).csv") |> DataFrame
+        push!(data_norm, df_norm)
+
+        df_purity_ordinary = CSV.File("data/purity/ordinary/purity_q$(q)_L$(L).csv") |> DataFrame
+        df_purity_extremized = CSV.File("data/purity/extremized/purity_q$(q)_L$(L).csv") |> DataFrame
+        push!(data_error, abs.(df_purity_extremized[:, 2] - df_purity_ordinary[:, 2]) ./ 2)
+    end
+
+    with_theme(theme_latexfonts()) do
+        f = Figure(size = (width, height), fontsize = font)
+        ax = Axis(f[1, 1],
+            # title = L"\beta = %$(β), q = %$(q)",
+            xlabel = L"β",
+            ylabel = L"\ln\left(F_1(\rho)\right) / N - \ln(2)/2",
+        )
+        for i in eachindex(qs)
+            q = qs[i]
+            errorbars!(
+                ax,
+                data_norm[i][:,1],
+                data_norm[i][:,2] .- log(2) / 2,
+                data_error[i][:],
+                data_error[i][:],
+                whiskerwidth = 3,
+                direction = :y
+            )
+            lines!(
+                ax,
+                data_norm[i][:,1],
+                data_norm[i][:,2] .- log(2) / 2,
+                color = Makie.wong_colors()[q ÷ 2],
+                label= L"q = %$(q)"
+            )
+        end
+
+        axislegend(position = :rb, rowgap = 0, padding = (7, 7, 2, 2), margin = (10, 10, 10, 10))
+        resize_to_layout!(f)
+        display(f)
+        save_fig && save("figures/norm_purity/norm_L$(L).pdf", f)
+    end
+end
+
+
+function plot_purity(qs, L, save_fig=false)
+    inch = 96
+    pt = 4/3
+    cm = inch / 2.54
+
+    invphi = (sqrt(5) - 1) / 2
+
+    width = 6.5inch
+    height = width * invphi
+    font = 12pt
+
+    mkpath("figures/norm_purity/")
+
+    data_ordinary = []
+    data_extremized = []
+
+    for i = eachindex(qs)
+        q = qs[i]
+        df_ordinary = CSV.File("data/purity/ordinary/purity_q$(q)_L$(L).csv") |> DataFrame
+        push!(data_ordinary, df_ordinary)
+        df_extremized = CSV.File("data/purity/extremized/purity_q$(q)_L$(L).csv") |> DataFrame
+        push!(data_extremized, df_extremized)
+    end
+
+    with_theme(theme_latexfonts()) do
+        f = Figure(size = (width, height), fontsize = font)
+        ax = Axis(f[1, 1],
+            # title = L"\beta = %$(β), q = %$(q)",
+            xlabel = L"β",
+            ylabel = L"S_2(\rho) / N",
+        )
+        for i in eachindex(qs)
+            q = qs[i]
+            lines!(
+                ax,
+                data_ordinary[i][:,1],
+                data_ordinary[i][:,2],
+                color = Makie.wong_colors()[q ÷ 2],
+                label= L"q = %$(q)"
+            )
+        end
+        for i in eachindex(qs)
+            q = qs[i]
+            lines!(
+                ax,
+                data_extremized[i][:,1],
+                data_extremized[i][:,2],
+                color = Makie.wong_colors()[q ÷ 2],
+                label= L"q = %$(q)",
+                linestyle = :dash,
+            )
+        end
+
+        group_ordinary = [LineElement(color = Makie.wong_colors()[q ÷ 2], linestyle = nothing) for q in qs]
+        group_extremized = [LineElement(color = Makie.wong_colors()[q ÷ 2], linestyle = :dash) for q in qs]
+
+        Legend(
+            f[1,1],
+            [group_ordinary, group_extremized],
+            [[L"q = %$(q)" for q in qs], [L"q = %$(q)" for q in qs]],
+            [L"\ln(Z(2β)) / N", L"\max\left(H(w) - I^{(2, w)}_\mathrm{SYK}\right)"],
+            nbanks = 2,
+            tellheight = false,
+            tellwidth = false,
+            halign = :left,
+            valign = :bottom,
+            margin = (10, 10, 10, 10),
+            fontsize = font,
+            titlegap = 0,
+            groupgap = 10,
+            backgroundcolor = RGBA(1, 1, 1, 0.9)
+        )
+
+        # axislegend(position = :lt, rowgap = 0, padding = (7, 7, 2, 2), margin = (10, 10, 10, 10))
+        resize_to_layout!(f)
+        display(f)
+        save_fig && save("figures/norm_purity/purity_L$(L).pdf", f)
+    end
+end
+
+
+function plot_norm_vs_purity(qs, L, save_fig=false)
+    inch = 96
+    pt = 4/3
+    cm = inch / 2.54
+
+    invphi = (sqrt(5) - 1) / 2
+
+    width = 6.5inch
+    height = width * invphi
+    font = 12pt
+
+    mkpath("figures/norm_purity/")
+
+    data_norm = []
+    data_error = []
+    data_purity_ordinary = []
+    # data_purity_extremized = []
+
+    for i = eachindex(qs)
+        q = qs[i]
+        df_norm = CSV.File("data/norm/norm_q$(q)_L$(L).csv") |> DataFrame
+        push!(data_norm, df_norm)
+        df_purity_ordinary = CSV.File("data/purity/ordinary/purity_q$(q)_L$(L).csv") |> DataFrame
+        push!(data_purity_ordinary, df_purity_ordinary)
+        df_purity_extremized = CSV.File("data/purity/extremized/purity_q$(q)_L$(L).csv") |> DataFrame
+        push!(data_error, abs.(df_purity_extremized[:, 2] - df_purity_ordinary[:, 2]) ./ 2)
+    end
+
+    with_theme(theme_latexfonts()) do
+        f = Figure(size = (width, height), fontsize = font)
+        ax = Axis(f[1, 1],
+            # title = L"\beta = %$(β), q = %$(q)",
+            xlabel = L"β",
+            # ylabel = L"$\ln(2)/4 - S_2(\rho) / 2N$",
+        )
+        for i in eachindex(qs)
+            q = qs[i]
+            errorbars!(
+                ax,
+                data_norm[i][:,1],
+                data_norm[i][:,2] .- log(2) / 2,
+                data_error[i][:],
+                data_error[i][:],
+                whiskerwidth = 3,
+                direction = :y
+            )
+            lines!(
+                ax,
+                data_norm[i][:,1],
+                data_norm[i][:,2] .- log(2) / 2,
+                color = Makie.wong_colors()[q ÷ 2],
+                # label= L"\ln(F_1(\rho)) / N - \ln(2)/2 \quad (q = %$(q))",
+                label= L"\ln\left(\tilde{F}_1(\rho)\right) / N \quad (q = %$(q))",
+
+            )
+            lines!(
+                ax,
+                data_purity_ordinary[i][:,1],
+                (log(2) / 2 .- data_purity_ordinary[i][:,2])/2,
+                color = Makie.wong_colors()[q ÷ 2],
+                linestyle = :dash,
+                label= L"\tilde{S}_2(\rho) / N \quad (q = %$(q))"
+            )
+        end
+
+        group_norm = [LineElement(color = Makie.wong_colors()[q ÷ 2], linestyle = nothing) for q in qs]
+        group_purity = [LineElement(color = Makie.wong_colors()[q ÷ 2], linestyle = :dash) for q in qs]
+
+        Legend(
+            f[1,1],
+            [group_norm, group_purity],
+            [[L"q = %$(q)" for q in qs], [L"q = %$(q)" for q in qs]],
+            [L"\ln(F_1(\rho)) / N - \ln(2)/2", L"\ln(2) / 4 - S_2(\rho) / 2N"],
+            nbanks = length(qs),
+            tellheight = false,
+            tellwidth = false,
+            halign = :right,
+            valign = :bottom,
+            margin = (10, 10, 10, 10),
+            fontsize = font,
+            titlegap = 0,
+            groupgap = 10,
+        )
+
+        # axislegend(position = :rb, rowgap = 0, padding = (7, 7, 2, 2))
+        resize_to_layout!(f)
+        display(f)
+        save_fig && save("figures/norm_purity/norm_purity_L$(L).pdf", f)
+    end
+end
+
 # plot_1R2_weighted(0.1, [2, 4], 1000, true)
 # plot_1R2_weighted(0.2, [2, 4], 1000, true)
 # plot_1R2_weighted(0.5, [2, 4, 6, 8], 1000, true)
@@ -371,7 +605,7 @@ end
 # plot_1R4a_weighted(20.0, [2, 4, 6, 8], 1000, true)
 # plot_1R4a_weighted(50.0, [2, 4, 6, 8], 1000, true)
 
-plot_R4_weighted_single_q(50.0, 8, 1000, true, true, false, true)
+# plot_R4_weighted_single_q(50.0, 8, 1000, true, true, false, true)
 
 # plot_1_norm(50.0, [2, 4, 6, 8], 1000, false)
 
@@ -380,4 +614,8 @@ plot_R4_weighted_single_q(50.0, 8, 1000, true, true, false, true)
 
 # plot_1R2_comparison(10., 4, 1000, false)
 
-plot_R4_weighted(50.0, 4, 1000, false)
+# plot_R4_weighted(50.0, 4, 1000, false)
+
+# plot_norm([2, 4, 6, 8], 1000, true)
+# plot_purity([2, 4, 6, 8], 1000, true)
+plot_norm_vs_purity([2, 4], L, true)

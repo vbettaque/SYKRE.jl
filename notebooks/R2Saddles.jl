@@ -25,13 +25,13 @@ function generate_R2_G_plot(β, w, q, L; init_lerp = 0.5, lerp_divisor = 2, tol=
 end
 
 β = 20
-w = 0.75
+w = 0.01
 q = 4
-L = 1000
+L = 1800
 
 f, G = generate_R2_G_plot(β, w, q, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
-CSV.write("data/G_saddles/R2/G12_beta$(β)_w$(w)_q$(q)_L$(L).csv", Tables.table(G.blocks[:, :, 2]), writeheader=false)
+# CSV.write("data/G_saddles/R2/G12_beta$(β)_w$(w)_q$(q)_L$(L).csv", Tables.table(G.blocks[:, :, 2]), writeheader=false)
 
 # save("figures/G_saddles/R2/G_R2_beta$(β)_w$(w)_q$(q)_L$(L).pdf", f)
-# f
+f

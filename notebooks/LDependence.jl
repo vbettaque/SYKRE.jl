@@ -71,7 +71,7 @@ function generate_jump_dependence(Ls, q, β, w; init_lerp = 0.5, lerp_divisor = 
     !ispath(path) && mkpath(path)
     if !isfile(file)
         touch(file)
-        write(file, "L,saddle_0,saddle_w\n")
+        write(file, "L,saddle_0,saddle_w,saddle_0_at_w,saddle_w_at_0\n")
     end
 
     for i in eachindex(Ls)
@@ -80,20 +80,24 @@ function generate_jump_dependence(Ls, q, β, w; init_lerp = 0.5, lerp_divisor = 
 
         G_init_1 = Replicas.init(1, L)
         G_init_2 = Replicas.init(2, L)
+        G_init_2.blocks[:, :, 1] *= 1-w
+        G_init_2.blocks[:, :, 2] *= w
 
         G_1, Σ_1 = WeightedReplicas.schwinger_dyson(G_init_1, 0.0, syk_1; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
         saddle_0 = 2 * WeightedReplicas.log_saddle(G_1, Σ_1, 0, syk_1)
+        saddle_0_at_w = 2 * WeightedReplicas.log_saddle(G_1, Σ_1, w, syk_1)
         G_2, Σ_2 = WeightedReplicas.schwinger_dyson(G_init_2, w, syk_2; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
         saddle_w = WeightedReplicas.log_saddle(G_2, Σ_2, w, syk_2)
+        saddle_w_at_0 = WeightedReplicas.log_saddle(G_2, Σ_2, 0, syk_2)
 
-        df = DataFrame(L = L, saddle_0 = saddle_0, saddle_w = saddle_w)
+        df = DataFrame(L = L, saddle_0 = saddle_0, saddle_w = saddle_w, saddle_0_at_w = saddle_0_at_w, saddle_w_at_0 = saddle_w_at_0)
 
         CSV.write(file, df, append=true)
     end
 end
 
 Ls = 100:100:2000
-generate_jump_dependence(Ls, 4, 20, 0.01; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+generate_jump_dependence(Ls, 4, 50, 0.001; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 # generate_1R1_det_plus_dependence(Ls, 2, 1; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 # generate_1R2_det_plus_dependence(Ls, 4, 20; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 

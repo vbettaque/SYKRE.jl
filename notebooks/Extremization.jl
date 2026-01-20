@@ -20,7 +20,7 @@ end
 function gss(f, a, b, tol=1e-5)
     a, b = min(a, b), max(a, b)
     h = b - a
-    h <= tol && return (a + b) / 2
+    h <= tol && return (a, b)
 
     # Required steps to achieve tolerance
     n = Int(ceil(log(tol / h) / log(invphi)))
@@ -51,9 +51,9 @@ function gss(f, a, b, tol=1e-5)
     end
 
     if yc < yd
-        return (a + d) / 2
+        return (a, d)
     else
-        return (b + c) / 2
+        return (c, b)
     end
 end
 
@@ -173,11 +173,58 @@ function generate_purity_data_from_w_crit(q, L; init_lerp = 0.5, lerp_divisor = 
     end
 end
 
+
+function generate_norm_data(βs, q, L; w_min = 0.0, w_max = 0.5, init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+    path = "data/norm/"
+    filename = "norm" * "_q" * string(q) * "_L" * string(L) * ".csv"
+    file = path * filename
+    !ispath(path) && mkpath(path)
+    if !isfile(file)
+        touch(file)
+        write(file, "beta,log_norm,w_crit,log_Z\n")
+    end
+
+    G_init_2 = Replicas.init(2, L)
+    G_init_Z = Replicas.init(1, L)
+    for i = eachindex(βs)
+        β = βs[i]
+        @info "$(i) out of $(length(βs)): β = $(β)"
+
+        @info "Computing log_Z"
+        syk_2 = SYKData(1, 1, q, 2, β)
+        syk_Z = SYKData(1, 1, q, 1, β)
+        G_Z, Σ_Z = WeightedReplicas.schwinger_dyson(G_init_Z, 0, syk_Z; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
+        log_Z = WeightedReplicas.log_saddle(G_Z, Σ_Z, 0, syk_Z)
+        @info "log_Z = $(log_Z)"
+
+        @info "Extremizing H(w) - I(w) / 2"
+        function f(w)
+            G_2, Σ_2 = WeightedReplicas.schwinger_dyson(G_init_2, w, syk_2; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
+            return -(WeightedReplicas.log_saddle(G_2, Σ_2, w, syk_2) / 2 + binary_entropy(w) - log_Z)
+        end
+        w_crit_lower, w_crit_upper = gss(f, w_min, w_max, 1e-3)
+        w_crit = (w_crit_lower + w_crit_upper) / 2
+        # w_min = w_crit_lower
+
+        @info "Computing log_norm at w_crit"
+        log_norm = -f(w_crit)
+
+        df = DataFrame(beta = β, log_norm = log_norm, w_crit = w_crit, log_Z = log_Z)
+
+        CSV.write(file, df, append=true)
+    end
+end
+
 L = 1000
 βs = range(0.5, step=0.5, stop=20)
 
+# generate_norm_data(4.5:0.5:20, 6, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+# generate_norm_data(6.5:0.5:20, 8, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+generate_norm_data(18.5:0.5:20, 2, L; w_min = 0.49, w_max = 0.5, init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+
 # generate_extremized_purity_data(βs, 6, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-generate_extremized_purity_data(βs, 8, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-# generate_ordinary_purity_data(βs, q, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+# generate_extremized_purity_data(βs, 8, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+# generate_ordinary_purity_data(βs, 8, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+# generate_ordinary_purity_data(βs, 2, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
 # generate_purity_data_from_w_crit(4, 1000; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)

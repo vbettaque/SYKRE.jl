@@ -10,7 +10,7 @@ function binary_entropy(w)
     if iszero(w) || isone(w)
         return 0
     end
-    return - w * log2(w) - (1 - w) * log2(1 - w)
+    return - w * log(w) - (1 - w) * log(1 - w)
 end
 
 function generate_2R1_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
@@ -41,7 +41,7 @@ function generate_2R1_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
         entropy = 0
 
         G_temp, Σ_temp = WeightedReplicas.schwinger_dyson(G_init, w, syk; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
-        saddle = 2 * WeightedReplicas.log2_saddle(G_temp, Σ_temp, 0, syk)
+        saddle = 2 * WeightedReplicas.log_saddle(G_temp, Σ_temp, 0, syk)
         pf_minus, pf_plus = WeightedReplicas.pfaffians(Σ_temp, syk)
         pf_minus *= pf_minus
         pf_plus *= pf_plus
@@ -64,7 +64,7 @@ function generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
     Σ_temp = Replicas.init(2, L)
 
     path = "data/weighted/1R2/"
-    filename = "weight_1R2" * "_beta" * string(β) * "_q" * string(q) * "_L" * string(L) * ".csv"
+    filename = "weighted_1R2" * "_beta" * string(β) * "_q" * string(q) * "_L" * string(L) * ".csv"
     file = path * filename
     !ispath(path) && mkpath(path)
     if !isfile(file)
@@ -76,6 +76,8 @@ function generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
         w = ws[i]
         @info "$(i) out of $(length(ws)): w = $(w)"
 
+        # G_init.blocks[:, :, 2] .= (2w)^(1/(q-1)) / 2
+
         saddle = 0
         pf_minus = 0
         pf_plus = 0
@@ -83,7 +85,7 @@ function generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 
         entropy = 0
 
         G_temp, Σ_temp = WeightedReplicas.schwinger_dyson(G_init, w, syk; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
-        saddle = WeightedReplicas.log2_saddle(G_temp, Σ_temp, w, syk)
+        saddle = WeightedReplicas.log_saddle(G_temp, Σ_temp, w, syk)
         pf_minus, pf_plus = WeightedReplicas.pfaffians(Σ_temp, syk)
         p_plus = pf_plus / (pf_plus + pf_minus)
         entropy = binary_entropy(w)
@@ -189,12 +191,12 @@ function generate_1R4b_weight_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor =
     end
 end
 
-β = 10.0
+β = 20.0
 q = 4
 L = 1000
-ws = [0.02]
+ws = 0:0.02:1
 
-generate_1R4b_weight_data(ws, L, β, q; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+generate_1R2_weight_data(ws, L, β, q; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
 
 # for β in [2.0, 5.0, 10.0, 20.0, 50.0]
