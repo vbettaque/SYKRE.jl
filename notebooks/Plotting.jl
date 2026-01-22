@@ -1,16 +1,29 @@
 using CSV, DataFrames, Statistics, CairoMakie, LinearAlgebra, FFTW, Latexify, BlockArrays, Colors
 
 
-function plot_1R2_weighted(β, qs, L, save_fig = false)
-    inch = 96
-    pt = 4/3
-    cm = inch / 2.54
+inch = 96
+pt = 4/3
+cm = inch / 2.54
 
-    width = 3.25inch
-    height = 3 * width / 4
-    font = 10pt
+invphi = (sqrt(5) - 1) / 2
 
-    mkpath("figures/weighted/1R2/")
+width_large = 6.5inch
+height_large = invphi * width_large
+
+width_small = 3.25inch
+height_small = invphi * width_small
+
+font_large = 12pt
+font_small = 10pt
+
+legend_color = RGBA(1, 1, 1, 0.8)
+
+function plot_R2_weighted(β, qs, L, save_fig = false)
+    mkpath("figures/weighted/R2/")
+    
+    width = width_small
+    height = height_small
+    font = font_small
 
     weighted_data = []
     Z_data = []
@@ -29,7 +42,7 @@ function plot_1R2_weighted(β, qs, L, save_fig = false)
     # -I(w)
 
     with_theme(theme_latexfonts()) do
-        f = Figure(size = (width, height), figure_padding = (2, 1, -1, 1), fontsize = font)
+        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
         ax = Axis(f[1, 1],
             # title = "Experimental data and exponential fit",
             xlabel = L"$w$",
@@ -44,16 +57,15 @@ function plot_1R2_weighted(β, qs, L, save_fig = false)
                 label= L"$q = %$(qs[i])$"
             )
         end
-        axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0))
-        resize_to_layout!(f)
+        axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0), backgroundcolor = legend_color)
         display(f)
-        save_fig && save("figures/weighted/1R2/weighted_action_1R2_beta$(β)_L$(L).pdf", f)
+        save_fig && save("figures/weighted/R2/weighted_action_R2_beta$(β)_L$(L).pdf", f)
     end
 
     # -I(w) + H(w)
 
     with_theme(theme_latexfonts()) do
-        f = Figure(size = (width, height), figure_padding = (2, 1, -1, 1), fontsize = font)
+        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
         ax = Axis(f[1, 1],
             # title = "Experimental data and exponential fit",
             xlabel = L"$w$",
@@ -68,20 +80,19 @@ function plot_1R2_weighted(β, qs, L, save_fig = false)
                 label= L"$q = %$(qs[i])$"
             )
         end
-        axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0))
-        resize_to_layout!(f)
+        axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0), backgroundcolor = legend_color)
         display(f)
-        save_fig && save("figures/weighted/1R2/weighted_action_entropy_1R2_beta$(β)_L$(L).pdf", f)
+        save_fig && save("figures/weighted/R2/weighted_action_entropy_R2_beta$(β)_L$(L).pdf", f)
     end
 
-    # p_plus
+    # w_crit
 
     with_theme(theme_latexfonts()) do
-        f = Figure(size = (width, height), figure_padding = (1, 1, -1, 1), fontsize = font)
+        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
         ax = Axis(f[1, 1],
             # title = "Experimental data and exponential fit",
             xlabel = L"$w$",
-            ylabel = L"$p_+$",
+            ylabel = L"$w_\mathrm{crit}$",
         )
         for i in eachindex(qs)
             lines!(
@@ -100,94 +111,45 @@ function plot_1R2_weighted(β, qs, L, save_fig = false)
             linestyle = :dash,
             label= L"$w$"
         )
-        axislegend(position = :lt, rowgap = -5, padding = (6, 6, 0, 0))
+        axislegend(position = :lt, rowgap = -5, padding = (6, 6, 0, 0), backgroundcolor = legend_color)
         max_p = maximum(weighted_data[i][end,5] for i in eachindex(qs))
         ylims!(-0.05 * max_p, 1.05 * max_p)
-        resize_to_layout!(f)
         display(f)
-        save_fig && save("figures/weighted/1R2/weighted_p_plus_1R2_beta$(β)_L$(L).pdf", f)
+        save_fig && save("figures/weighted/R2/weighted_w_crit_R2_beta$(β)_L$(L).pdf", f)
     end
-
-    # p = plot()
-
-    # for i in eachindex(qs)
-    #     plot!(data[i][:,1], data[i][:,5], label="\$q = $(qs[i])\$")
-    # end
-
-    # plot!(data[1][:,1], data[1][:,1], color=:grey, label="\$w\$")
-
-    # xlabel!("\$w\$")
-    # ylabel!("\$p_+\$")
-
-    # title!("1R2 (\$ \\beta = $(β)\$)")
-
-    # display(p)
-    # save && savefig("figures/weighted/1R2/weighted_p_plus_1R2_beta$(β)_L$(L).pdf")
 end
 
-function plot_1_norm(β, qs, L, save=false)
-    mkpath("figures/weighted/1R2/")
+# function plot_1R2_comparison(β, q, L, save=false)
 
-    Zs = []
-    data = []
-    for q in qs
-        push!(data, CSV.File("data/weighted/1R2/weighted_1R2_beta$(β)_q$(q)_L$(L).csv") |> DataFrame)
-        Z_data = CSV.File("data/partition_function/partition_function_q$(q)_L$(L).csv") |> DataFrame
-        push!(Zs, Z_data[Z_data.beta .== β, :][1, 2])
-    end
-
-    p = plot()
-
-    for i in eachindex(qs)
-        plot!(data[i][:,1], (data[i][:,2] .- 2 * Zs[i]) / 2 + data[i][:,6], label="\$q = $(qs[i])\$")
-    end
-
-    hline!([log(2)/2], label="\$\\ln(2)/2\$")
-
-    xlabel!("\$w\$")
-    ylabel!("\$\\ln|\\xi(w)|/N + H(w)\$")
-
-    title!("\$\\beta = $(β)\$")
-
-    display(p)
-    save && savefig("figures/weighted/1R2/weighted_action_entropy_1R2_beta$(β)_L$(L).pdf")
-end
-
-function plot_1R2_comparison(β, q, L, save=false)
-
-    data = CSV.File("data/weighted/1R2/weighted_1R2_beta$(β)_q$(q)_L$(L).csv") |> DataFrame
-    Z_data = CSV.File("data/partition_function/partition_function_q$(q)_L$(L).csv") |> DataFrame
-    Z_data = Z_data[Z_data.beta .== β, :][1, :]
+#     data = CSV.File("data/weighted/1R2/weighted_1R2_beta$(β)_q$(q)_L$(L).csv") |> DataFrame
+#     Z_data = CSV.File("data/partition_function/partition_function_q$(q)_L$(L).csv") |> DataFrame
+#     Z_data = Z_data[Z_data.beta .== β, :][1, :]
 
 
-    # -I(w)
+#     # -I(w)
 
-    ws = LinRange(0, 1, 1000)
-    saddle_approx = ws .* 2 .* log(Z_data[4]) + (1 .- ws) .* 2 .* log(Z_data[3]) .- 2 .* Z_data[5]
+#     ws = LinRange(0, 1, 1000)
+#     saddle_approx = ws .* 2 .* log(Z_data[4]) + (1 .- ws) .* 2 .* log(Z_data[3]) .- 2 .* Z_data[5]
 
-    p = plot()
-    plot!(data[:,1], data[:,2], label="actual")
-    plot!(ws, saddle_approx, label="approximation")
+#     p = plot()
+#     plot!(data[:,1], data[:,2], label="actual")
+#     plot!(ws, saddle_approx, label="approximation")
 
-    xlabel!("\$w\$")
-    ylabel!("\$-I(w)\$")
+#     xlabel!("\$w\$")
+#     ylabel!("\$-I(w)\$")
 
-    title!("1R2 (\$ \\beta = $(β), q = $(q)\$)")
+#     title!("1R2 (\$ \\beta = $(β), q = $(q)\$)")
 
-    display(p)
-    save && savefig("figures/weighted/1R2/weighted_action_1R2_beta$(β)_L$(L).pdf")
-end
+#     display(p)
+#     save && savefig("figures/weighted/1R2/weighted_action_1R2_beta$(β)_L$(L).pdf")
+# end
 
 function plot_R4_weighted_single_q(β, q, L, plot_2R2 = true, plot_1R4a = true, plot_1R4b = true, save_fig=false)
-    inch = 96
-    pt = 4/3
-    cm = inch / 2.54
-
-    width = 3.25inch
-    height = 3 * width / 4
-    font = 10pt
-
     mkpath("figures/weighted/R4/single_q/q$(q)")
+
+    width = width_small
+    height = height_small
+    font = font_small
 
     data_Z = CSV.File("data/partition_function/partition_function_q$(q)_L$(L).csv") |> DataFrame
     data_Z = data_Z[data_Z.beta .== β, :][1, :]
@@ -217,7 +179,7 @@ function plot_R4_weighted_single_q(β, q, L, plot_2R2 = true, plot_1R4a = true, 
     # -I(w)
 
     with_theme(theme_latexfonts()) do
-        f = Figure(size = (width, height), figure_padding = (2, 1, -1, 1), fontsize = font)
+        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
         ax = Axis(f[1, 1],
             # title = L"\beta = %$(β), q = %$(q)",
             xlabel = L"$w$",
@@ -228,25 +190,24 @@ function plot_R4_weighted_single_q(β, q, L, plot_2R2 = true, plot_1R4a = true, 
             data_2R2[:,1],
             data_2R2[:,2] .- 4 * data_Z[2],
             color = Makie.wong_colors()[1],
-            label= L"2R2"
+            label= "2R2"
         )
         plot_1R4a && lines!(
             ax,
             data_1R4a[:,1],
             data_1R4a[:,2] .- 4 * data_Z[2],
             color = Makie.wong_colors()[2],
-            label= L"1R4a"
+            label= "1R4"
         )
         plot_1R4b && lines!(
             ax,
             data_1R4b[:,1],
             data_1R4b[:,2] .- 4 * data_Z[2],
             color = Makie.wong_colors()[3],
-            label= L"1R4b"
+            label= "1R4b"
         )
 
-        axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0))
-        resize_to_layout!(f)
+        axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0), backgroundcolor = legend_color)
         display(f)
         save_fig && save("figures/weighted/R4/single_q/q$(q)/weighted_action_R4_beta$(β)_q$(q)_L$(L).pdf", f)
     end
@@ -254,7 +215,7 @@ function plot_R4_weighted_single_q(β, q, L, plot_2R2 = true, plot_1R4a = true, 
     # # -I(w) + H(w)
 
     with_theme(theme_latexfonts()) do
-        f = Figure(size = (width, height), figure_padding = (2, 1, -1, 1), fontsize = font)
+        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
         ax = Axis(f[1, 1],
             # title = L"\beta = %$(β), q = %$(q)",
             xlabel = L"$w$",
@@ -265,58 +226,57 @@ function plot_R4_weighted_single_q(β, q, L, plot_2R2 = true, plot_1R4a = true, 
             data_2R2[:,1],
             data_2R2[:,2] .- 4 * data_Z[2] + data_2R2[:,6],
             color = Makie.wong_colors()[1],
-            label= L"2R2"
+            label= "2R2"
         )
         plot_1R4a && lines!(
             ax,
             data_1R4a[:,1],
             data_1R4a[:,2] .- 4 * data_Z[2] + data_1R4a[:,6],
             color = Makie.wong_colors()[2],
-            label= L"1R4a"
+            label= "1R4"
         )
         plot_1R4b && lines!(
             ax,
             data_1R4b[:,1],
             data_1R4b[:,2] .- 4 * data_Z[2] + data_1R4b[:,6],
             color = Makie.wong_colors()[3],
-            label= L"1R4b"
+            label= "1R4b"
         )
 
         axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0))
-        resize_to_layout!(f)
         display(f)
         save_fig && save("figures/weighted/R4/single_q/q$(q)/weighted_action_entropy_R4_beta$(β)_q$(q)_L$(L).pdf", f)
     end
 
-    # # -p_plus
+    # w_crit
 
     with_theme(theme_latexfonts()) do
-        f = Figure(size = (width, height), figure_padding = (2, 1, -1, 1), fontsize = font)
+        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
         ax = Axis(f[1, 1],
             # title = L"\beta = %$(β), q = %$(q)",
             xlabel = L"$w$",
-            ylabel = L"$p_+$",
+            ylabel = L"$w_\mathrm{crit}$",
         )
         plot_2R2 && lines!(
             ax,
             data_2R2[:,1],
             data_2R2[:,5],
             color = Makie.wong_colors()[1],
-            label= L"2R2"
+            label= "2R2"
         )
         plot_1R4a && lines!(
             ax,
             data_1R4a[:,1],
             data_1R4a[:,5],
             color = Makie.wong_colors()[2],
-            label= L"1R4a"
+            label= "1R4"
         )
         plot_1R4b && lines!(
             ax,
             data_1R4b[:,1],
             data_1R4b[:,5],
             color = Makie.wong_colors()[3],
-            label= L"1R4b"
+            label= "1R4b"
         )
         lines!(
             ax,
@@ -329,41 +289,140 @@ function plot_R4_weighted_single_q(β, q, L, plot_2R2 = true, plot_1R4a = true, 
         axislegend(position = :lt, rowgap = -5, padding = (6, 6, 0, 0))
         max_p = max(data_2R2[end,5], data_1R4a[end,5], data_1R4b[end,5])
         ylims!(-0.05 * max_p, 1.05 * max_p)
-        resize_to_layout!(f)
         display(f)
-        save_fig && save("figures/weighted/R4/single_q/q$(q)/weighted_p_plus_R4_beta$(β)_q$(q)_L$(L).pdf", f)
+        save_fig && save("figures/weighted/R4/single_q/q$(q)/weighted_w_crit_R4_beta$(β)_q$(q)_L$(L).pdf", f)
+    end
+end
+
+
+function plot_2R2_weighted(β, qs, L, save_fig=false)
+    mkpath("figures/weighted/R4/2R2")
+
+    width = width_small
+    height = height_small
+    font = font_small
+
+    data_2R2 = []
+    data_Z = []
+
+    for i = eachindex(qs)
+        q = qs[i]
+        data_Z_q = CSV.File("data/partition_function/partition_function_q$(q)_L$(L).csv") |> DataFrame
+        data_Z_q = data_Z_q[data_Z_q.beta .== β, :][1, :]
+        push!(data_Z, data_Z_q)
+
+        data_2R2_q = CSV.File("data/weighted/1R2/weighted_1R2_beta$(β)_q$(q)_L$(L).csv") |> DataFrame
+        data_2R2_q[:, 2] = 2 * data_2R2_q[:, 2]
+        data_2R2_q[:, 3] = data_2R2_q[:, 3].^2
+        data_2R2_q[:, 4] = data_2R2_q[:, 4].^2
+        data_2R2_q[:, 5] = data_2R2_q[:, 4] ./ (data_2R2_q[:, 3] .+ data_2R2_q[:, 4])
+        data_2R2_q[1, 2] = 4 * data_Z_q[2]
+        data_2R2_q[1, 3] = data_Z_q[3]^4
+        data_2R2_q[1, 4] = data_Z_q[4]^4
+        data_2R2_q[1, 5] = data_2R2_q[1, 4] / (data_2R2_q[1, 3] + data_2R2_q[1, 4])
+
+        push!(data_2R2, data_2R2_q)
     end
 
-    # p = plot()
+    # display(data_Z)
 
-    # for i in eachindex(qs)
-    #     plot!(data[i][:,1], data[i][:,5], label="\$q = $(qs[i])\$")
-    # end
+    # -I(w)
 
-    # plot!(LinRange(0, 1, 100), LinRange(0, 1, 100), color=:grey, label="\$w\$")
+    with_theme(theme_latexfonts()) do
+        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
+        ax = Axis(f[1, 1],
+            # title = L"\beta = %$(β), q = %$(q)",
+            xlabel = L"$w$",
+            ylabel = L"$\ln\left(\overline{\xi(w)^4}\right) / N$",
+        )
 
-    # xlabel!("\$w\$")
-    # ylabel!("\$p_+\$")
+        for i = eachindex(qs)
+            q = qs[i]
+            lines!(
+                ax,
+                data_2R2[i][:,1],
+                data_2R2[i][:,2] .- 4 * data_Z[i][2],
+                color = Makie.wong_colors()[q ÷ 2],
+                label= L"q = %$(q)"
+            )
+        end
+       
+        axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0), backgroundcolor = legend_color)
+        display(f)
+        save_fig && save("figures/weighted/R4/2R2/weighted_action_2R2_beta$(β)_L$(L).pdf", f)
+    end
 
-    # title!("1R4a (\$ \\beta = $(β)\$)")
+    # # -I(w) + H(w)
 
-    # display(p)
-    # save && savefig("figures/weighted/1R4a/weighted_p_plus_1R4a_beta$(β)_L$(L).pdf")
+    with_theme(theme_latexfonts()) do
+        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
+        ax = Axis(f[1, 1],
+            # title = L"\beta = %$(β), q = %$(q)",
+            xlabel = L"$w$",
+            ylabel = L"$\ln\left(\overline{\xi(w)^4}\right) / N + H(w)$",
+        )
+
+        for i = eachindex(qs)
+            q = qs[i]
+            lines!(
+                ax,
+                data_2R2[i][:,1],
+                data_2R2[i][:,2] .- 4 * data_Z[i][2] + data_2R2[i][:,6],
+                color = Makie.wong_colors()[q ÷ 2],
+                label= L"q = %$(q)"
+            )
+        end
+
+        axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0))
+        display(f)
+        save_fig && save("figures/weighted/R4/2R2/weighted_action_entropy_2R2_beta$(β)_L$(L).pdf", f)
+    end
+
+    # w_crit
+
+    with_theme(theme_latexfonts()) do
+        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
+        ax = Axis(f[1, 1],
+            # title = L"\beta = %$(β), q = %$(q)",
+            xlabel = L"$w$",
+            ylabel = L"$w_\mathrm{crit}$",
+        )
+
+        for i = eachindex(qs)
+            q = qs[i]
+            lines!(
+                ax,
+                data_2R2[i][:,1],
+                data_2R2[i][:,5],
+                color = Makie.wong_colors()[q ÷ 2],
+                label= L"q = %$(q)"
+            )
+        end
+
+        lines!(
+            ax,
+            LinRange(0, 1, 100),
+            LinRange(0, 1, 100),
+            color = :gray,
+            linestyle = :dash,
+            label= L"$w$"
+        )
+
+        axislegend(position = :lt, rowgap = -5, padding = (6, 6, 0, 0), backgroundcolor = legend_color)
+        max_p = maximum([data_2R2[i][end,5] for i = eachindex(qs)])
+        ylims!(-0.05 * max_p, 1.05 * max_p)
+        display(f)
+        save_fig && save("figures/weighted/R4/2R2/weighted_w_crit_2R2_beta$(β)_L$(L).pdf", f)
+    end
 end
 
 
 function plot_norm(qs, L, save_fig=false)
-    inch = 96
-    pt = 4/3
-    cm = inch / 2.54
-
-    invphi = (sqrt(5) - 1) / 2
-
-    width = 6.5inch
-    height = width * invphi
-    font = 12pt
-
     mkpath("figures/norm_purity/")
+
+    width = width_large
+    height = height_large
+    font = font_large
 
     data_norm = []
     data_error = []
@@ -406,7 +465,6 @@ function plot_norm(qs, L, save_fig=false)
         end
 
         axislegend(position = :rb, rowgap = 0, padding = (7, 7, 2, 2), margin = (10, 10, 10, 10))
-        resize_to_layout!(f)
         display(f)
         save_fig && save("figures/norm_purity/norm_L$(L).pdf", f)
     end
@@ -414,17 +472,11 @@ end
 
 
 function plot_purity(qs, L, save_fig=false)
-    inch = 96
-    pt = 4/3
-    cm = inch / 2.54
-
-    invphi = (sqrt(5) - 1) / 2
-
-    width = 6.5inch
-    height = width * invphi
-    font = 12pt
-
     mkpath("figures/norm_purity/")
+
+    width = width_large
+    height = height_large
+    font = font_large
 
     data_ordinary = []
     data_extremized = []
@@ -487,7 +539,6 @@ function plot_purity(qs, L, save_fig=false)
         )
 
         # axislegend(position = :lt, rowgap = 0, padding = (7, 7, 2, 2), margin = (10, 10, 10, 10))
-        resize_to_layout!(f)
         display(f)
         save_fig && save("figures/norm_purity/purity_L$(L).pdf", f)
     end
@@ -495,17 +546,11 @@ end
 
 
 function plot_norm_vs_purity(qs, L, save_fig=false)
-    inch = 96
-    pt = 4/3
-    cm = inch / 2.54
-
-    invphi = (sqrt(5) - 1) / 2
-
-    width = 6.5inch
-    height = width * invphi
-    font = 12pt
-
     mkpath("figures/norm_purity/")
+
+    width = width_large
+    height = height_large
+    font = font_large
 
     data_norm = []
     data_error = []
@@ -579,33 +624,35 @@ function plot_norm_vs_purity(qs, L, save_fig=false)
         )
 
         # axislegend(position = :rb, rowgap = 0, padding = (7, 7, 2, 2))
-        resize_to_layout!(f)
         display(f)
         save_fig && save("figures/norm_purity/norm_purity_L$(L).pdf", f)
     end
 end
 
-# plot_1R2_weighted(0.1, [2, 4], 1000, true)
-# plot_1R2_weighted(0.2, [2, 4], 1000, true)
-# plot_1R2_weighted(0.5, [2, 4, 6, 8], 1000, true)
-# plot_1R2_weighted(1.0, [2, 4, 6, 8], 1000, true)
-# plot_1R2_weighted(2.0, [2, 4, 6, 8], 1000, true)
-# plot_1R2_weighted(5.0, [2, 4, 6, 8], 1000, true)
-# plot_1R2_weighted(10.0, [2, 4, 6, 8], 1000, true)
-# plot_1R2_weighted(20.0, [2, 4, 6, 8], 1000, true)
-# plot_1R2_weighted(50.0, [2, 4, 6, 8], 1000, true)
+# plot_R2_weighted(0.1, [2, 4], 1000, true)
+# plot_R2_weighted(0.2, [2, 4], 1000, true)
+# plot_R2_weighted(0.5, [2, 4, 6, 8], 1000, true)
+# plot_R2_weighted(1.0, [2, 4, 6, 8], 1000, true)
+# plot_R2_weighted(2.0, [2, 4, 6, 8], 1000, true)
+# plot_R2_weighted(5.0, [2, 4, 6, 8], 1000, true)
+# plot_R2_weighted(10.0, [2, 4, 6, 8], 1000, true)
+# plot_R2_weighted(20.0, [2, 4, 6, 8], 1000, true)
+# plot_R2_weighted(50.0, [2, 4, 6, 8], 1000, true)
 
-# plot_1R4a_weighted(0.1, [2, 4, 6, 8], 1000, true)
-# plot_1R4a_weighted(0.2, [2, 4, 6, 8], 1000, true)
-# plot_1R4a_weighted(0.5, [2, 4, 6, 8], 1000, true)
-# plot_1R4a_weighted(1.0, [2, 4, 6, 8], 1000, true)
-# plot_1R4a_weighted(2.0, [2, 4, 6, 8], 1000, true)
-# plot_1R4a_weighted(5.0, [2, 4, 6, 8], 1000, true)
-# plot_1R4a_weighted(10.0, [2, 4, 6, 8], 1000, true)
-# plot_1R4a_weighted(20.0, [2, 4, 6, 8], 1000, true)
-# plot_1R4a_weighted(50.0, [2, 4, 6, 8], 1000, true)
 
-# plot_R4_weighted_single_q(50.0, 8, 1000, true, true, false, true)
+# for β in [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
+#     plot_R4_weighted_single_q(β, 4, 1000, true, true, false, true)
+# end
+
+plot_2R2_weighted(0.1, [2, 4], 1000, true)
+plot_2R2_weighted(0.2, [2, 4], 1000, true)
+for β in [0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
+    plot_2R2_weighted(β, [2, 4, 6, 8], 1000, true)
+end
+
+
+
+# plot_2R2_weighted(20.0, [2], 1000, true)
 
 # plot_1_norm(50.0, [2, 4, 6, 8], 1000, false)
 
@@ -618,4 +665,4 @@ end
 
 # plot_norm([2, 4, 6, 8], 1000, true)
 # plot_purity([2, 4, 6, 8], 1000, true)
-plot_norm_vs_purity([2, 4], L, true)
+# plot_norm_vs_purity([2, 4], L, true)
