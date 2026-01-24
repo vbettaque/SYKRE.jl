@@ -22,12 +22,12 @@ function det_renormed(Σ_freq::AbstractArray, syk::SYKData)
 end
 
 function G_SD_freq(Σ_freq::AbstractArray, syk::SYKData)
-    L, M, M_ = size(Σ_freq)
-    @assert M == M_ == syk.M
+    L, R, R_ = size(Σ_freq)
+    @assert R == R_ == syk.M
     odd = isodd.(fftfreq(L, L))
     ωs = fftfreq(L, π * L / syk.β)
-    G = zeros(ComplexF64, L, M, M)
-    I_rep = Matrix{Float64}(I, syk.M, syk.M)
+    G = zeros(ComplexF64, L, R, R)
+    I_rep = Matrix{Float64}(I, syk.R, syk.R)
     for i=1:L
         odd[i] || continue
         G[i, :, :] = inv(-im * ωs[i] * I_rep - Σ_freq[i, :, :])
@@ -39,45 +39,78 @@ function Σ_SD_real(G_real::AbstractArray, syk::SYKData)
 	return syk.J^2 * G_real.^(syk.q - 1)
 end
 
-function schwinger_dyson(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=100000)
-	t = 0.5; b = 2; err=0 # Lerp and lerp refinement factors
-	Σ_real = copy(Σ_init)
-    # IFFT = plan_ifft(Σ_real, 1; flags=FFTW.MEASURE)
-    # Σ_freq = syk.β * (IFFT * Σ_real)
-    Σ_freq = syk.β * ifft(Σ_real, 1)
-	G_freq = G_SD_freq(Σ_freq, syk)
-    # FFT = plan_fft(G_freq, 1; flags=FFTW.MEASURE)
-    # G_real = real(FFT * G_freq) / syk.β
-    G_real = real(fft(G_freq, 1)) / syk.β
-	for i=1:max_iters
-		Σ_real = Σ_SD_real(G_real, syk)
-        Σ_freq = syk.β * ifft(Σ_real, 1)
-		G_freq_new = t * G_SD_freq(Σ_freq, syk) + (1 - t) * G_freq
-		err_new = sum(abs.(G_freq_new - G_freq))
-		if isapprox(err_new, 0; atol=1e-10)
-            G_real = real(fft(G_freq, 1)) / syk.β
-            Σ_real = Σ_SD_real(G_real, syk)
-            println("Converged after ", i, " iterations")
+function schwinger_dyson(G_init_real, syk::SYKData; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+    L, R, R_ = size(G_init)
+    @assert R == R_ == syk.M
+
+    IFFT = plan_ifft(G_real, 1; flags=FFTW.EXHAUSTIVE, timelimit=Inf)
+
+    t = init_lerp
+
+    G_real = G_init_real
+    Σ_real = Σ_SD_real(G_real, syk)
+
+    i = 1
+
+    @info "Iteration $(i)" rel_error = err lerp = t
+
+    Σ_freq = syk.β * (IFFT * Σ_real)
+    G_new_freq = G_SD_freq(Σ_freq, syk)
+
+    FFT = plan_fft(G_new_freq, 1; flags=FFTW.EXHAUSTIVE, timelimit=Inf)
+
+	G_new_real = real(FFT * G_new_freq) / β
+    G_lerp_real = zeros(L, R, R)
+
+    err = sqrt(sum(abs2, G_new_real - G_real)) / sqrt(sum(abs2, G_real))
+
+	while i <= max_iters
+        G_lerp_real = t * G_new_real + (1 - t) * G_real
+
+        err_new = sqrt(sum(abs2, G_lerp_real - G_real)) / sqrt(sum(abs2, G_real))
+
+        if err_new < tol
+            G_real = G_lerp_real
+            Σ_real = Σ_SD(G_real, syk)
+            @info "Converged after $(i) iterations"
             break
         end
-		if (err_new > err && i > 1)
-            t /= b
-            i -= 1
+
+        if (err_new > err)
+            @info "Relative error increased to $(err_new), trying again..."
+            t /= lerp_divisor
             continue
         end
-		err = err_new
-		G_freq = G_freq_new
-        G_real = real(fft(G_freq, 1)) / syk.β
-        i == max_iters && println("Exceeded iterations!")
+
+        err = err_new
+
+        G_real = G_lerp_real
+		Σ_real = Σ_SD_real(G_real, syk)
+
+        i += 1
+
+        if i > max_iters
+            @warn "Exceeded iterations!"
+            break
+        end
+
+        @info "Iteration $(i)" rel_error = err lerp = t
+
+        Σ_freq = syk.β * (IFFT * Σ_real)
+		G_new_freq = G_SD_freq(Σ_freq, syk)
+        G_new_real = real(FFT * G_new_freq) / β
 	end
-	return Σ_real, G_real
+
+	return G_real, Σ_real
 end
 
-function action(Σ_real, G_real, syk::SYKData)
-    L, M, M_ = size(Σ_real)
-    @assert M == M_ == syk.M
+function action(G_real, Σ_real, syk::SYKData)
+    L, R, R_ = size(G_real)
+    @assert R == R_ == syk.M
     Δτ = syk.β/L
-    Σ_freq = syk.β * ifft(Σ_real, 1)
+
+    IFFT = plan_ifft(G_real, 1; flags=FFTW.EXHAUSTIVE, timelimit=Inf)
+    Σ_freq = syk.β * (IFFT * Σ_real)
 
     prop_term = -log(det_renormed(Σ_freq, syk))/2
 
@@ -86,15 +119,13 @@ function action(Σ_real, G_real, syk::SYKData)
 end
 
 
-function logZ(L, syk::SYKData; Σ_init = zeros(L, syk.M, syk.M), max_iters=100000)
-    Σ, G = schwinger_dyson(L, syk; Σ_init = Σ_init, max_iters=max_iters)
-    return -action(Σ, G, syk), Σ, G
-end
+log_saddle(G_real, Σ_real, syk::SYKData) = -action(G_real, Σ_real, syk)
 
+log2_saddle(G_real, Σ_real, syk::SYKData) = log(2, ℯ) * log_saddle(G_real, Σ_real, syk)
 
-function free_energy(L, syk::SYKData; Σ_init = zeros(L, M, M), max_iters=100000)
-    logZ_saddle, Σ = logZ(L, syk; Σ_init=Σ_init, max_iters=max_iters)
-    return - logZ_saddle / syk.β, Σ
+function free_energy(G_real, Σ_real, syk::SYKData)
+    logZ_saddle = log_saddle(G_real, Σ_real, syk)
+    return - logZ_saddle / syk.β
 end
 
 end

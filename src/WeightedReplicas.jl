@@ -63,12 +63,12 @@ function schwinger_dyson(G_init::ReplicaMatrix, w, syk::SYKData; init_lerp = 0.5
 
     i = 1
 
+    @info "Iteration $(i)" rel_error = err lerp = t
+
     G_new = G_SD(Σ, w, syk)
     G_lerp = Replicas.init(G_init.R, G_init.L)
 
     err = frobenius(G_new - G) / frobenius(G)
-
-    @info "Iteration $(i)" rel_error = err lerp = t
 
 	while i <= max_iters
 		G_lerp = t * G_new + (1 - t) * G

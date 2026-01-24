@@ -3,8 +3,9 @@ using SYKRE.SYK
 using SYKRE.Replicas
 using SYKRE.WeightedReplicas
 using SYKRE.TFDReplicas
+using SYKRE.SYKFourier
 
-using CairoMakie, DataFrames, CSV, LsqFit, Printf, Latexify, LaTeXStrings, Colors
+using CairoMakie, DataFrames, CSV, LsqFit, Printf, Latexify, LaTeXStrings, Colors, FFTW
 
 invphi = (sqrt(5) - 1) / 2  # 1 / phi
 invphi2 = (3 - sqrt(5)) / 2
@@ -139,6 +140,58 @@ function generate_ordinary_purity_data(βs, q, L; init_lerp = 0.5, lerp_divisor 
     end
 end
 
+
+function generate_ordinary_fourier_purity_data(βs, q, L; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+    path = "data/purity/ordinary_fourier/"
+    filename = "purity" * "_q" * string(q) * "_L" * string(L) * ".csv"
+    file = path * filename
+    !ispath(path) && mkpath(path)
+    if !isfile(file)
+        touch(file)
+        write(file, "beta,log_purity,log_Z\n")
+    end
+
+    for i = eachindex(βs)
+        β = βs[i]
+        @info "$(i) out of $(length(βs)): β = $(β)"
+
+        odd_Z = isodd.(fftfreq(L, L))
+        ωs_Z = fftfreq(L, π * L / syk.β)
+        G_init_Z_freq = zeros(ComplexF64, (L, 1, 1))
+        G_init_Z_freq[odd_Z, 1, 1] = 1 ./ (-im .* ωs_Z[odd_Z])
+        FFT = plan_fft(G_init_Z_freq, 1; flags=FFTW.EXHAUSTIVE, timelimit=Inf)
+        G_init_Z_real = real(FFT * G_init_Z_freq) / syk.β
+
+        odd_2Z = isodd.(fftfreq(2L, 2L))
+        ωs_2Z = fftfreq(2L, π * L / syk.β)
+        G_init_2Z_freq = zeros(ComplexF64, (2L, 1, 1))
+        G_init_2Z_freq[odd_2Z, 1, 1] = 1 ./ (-im .* ωs_2Z[odd_2])
+        FFT = plan_fft(G_init_2Z_freq, 1; flags=FFTW.EXHAUSTIVE, timelimit=Inf)
+        G_init_2Z_real = real(FFT * G_init_2Z_freq) / 2syk.β
+
+        @info "Computing log_Z"
+        syk_Z = SYKData(1, 1, q, 1, β)
+        G_Z_real, Σ_Z_real = SYKFourier.schwinger_dyson(G_init_Z_real, syk_Z; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
+        log_Z = WeightedReplicas.log_saddle(G_Z_real, Σ_Z_real, syk_Z)
+        @info "log_Z = $(log_Z)"
+
+        @info "Computing log_purity"
+        syk_2Z = SYKData(1, 1, q, 1, 2β)
+        G_2Z_real, Σ_2Z_real = WeightedReplicas.schwinger_dyson(G_init_2Z_real, 0, syk_2Z; init_lerp = init_lerp, lerp_divisor = lerp_divisor, tol = tol, max_iters = max_iters)
+        log_2Z = WeightedReplicas.log_saddle(G_2Z_real, Σ_2Z_real, syk_2Z)
+
+
+        log_purity = -(log_2Z - 2 * log_Z)
+        @info "log_purity = $(log_purity)"
+
+
+        df = DataFrame(beta = β, log_purity = log_purity, log_Z = log_Z)
+
+        CSV.write(file, df, append=true)
+    end
+end
+
+
 function generate_purity_data_from_w_crit(q, L; init_lerp = 0.5, lerp_divisor = 2, tol=1e-5, max_iters=1000)
     path = "data/purity/w_crit/"
     filename = "purity" * "_q" * string(q) * "_L" * string(L) * ".csv"
@@ -215,12 +268,14 @@ function generate_norm_data(βs, q, L; w_min = 0.0, w_max = 0.5, init_lerp = 0.5
     end
 end
 
-L = 1000
+L = 100000
 βs = range(0.5, step=0.5, stop=20)
+
+generate_ordinary_fourier_purity_data(βs, 2, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
 # generate_norm_data(4.5:0.5:20, 6, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 # generate_norm_data(6.5:0.5:20, 8, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-generate_norm_data(18.5:0.5:20, 2, L; w_min = 0.49, w_max = 0.5, init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+# generate_norm_data(18.5:0.5:20, 2, L; w_min = 0.49, w_max = 0.5, init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
 # generate_extremized_purity_data(βs, 6, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 # generate_extremized_purity_data(βs, 8, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
