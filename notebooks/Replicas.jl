@@ -141,11 +141,11 @@ end
 N = 1
 J = 1
 q = 4
-β = 10
+β = 1
 L = 500
 w = 0.5
 
-R = 8
+R =  8
 
 syk = SYKData(N, J, q, R, β)
 
@@ -204,36 +204,36 @@ end
 # R = 6
 # r = [1, 1, 0, -1, 0, 1]
 
-R = 2
-N = 1
-J = 1
-q = 4
-β = 50
-L = 1000
-w = 0
+# R = 2
+# N = 1
+# J = 1
+# q = 4
+# β = 50
+# L = 1000
+# w = 0
 
 
-syk = SYKData(N, J, q, R, β)
+# syk = SYKData(N, J, q, R, β)
 
-G_init = Replicas.init(R, L)
+# G_init = Replicas.init(R, L)
 
-Replicas.plot(G_init; title="$(r)")
-G, Σ = WeightedReplicas.schwinger_dyson(G_init, w, syk; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-log_saddle = WeightedReplicas.log_saddle(G, Σ, w, syk)
-purity = log_saddle - w * log(w) - (1-w) * log(1-w) - log(2)/2
-Replicas.plot(G; title="q = $(q), beta = $(β)")
+# Replicas.plot(G_init; title="$(r)")
+# G, Σ = WeightedReplicas.schwinger_dyson(G_init, w, syk; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+# log_saddle = WeightedReplicas.log_saddle(G, Σ, w, syk)
+# purity = log_saddle - w * log(w) - (1-w) * log(1-w) - log(2)/2
+# Replicas.plot(G; title="q = $(q), beta = $(β)")
 
-blue = RGB(0,101.0/255,1)
-orange = RGB(1,154.0/255,0)
-grad = cgrad([blue, :gray95, orange], [0.0, 0.5, 1.0])
-p = heatmap(G.blocks[:, :, 2], aspect_ratio = 1, clims=(-0.5, 0.5), yflip = true, color = grad, title="G_21 (q = $(q), β = $(β), w = $(w))")
+# blue = RGB(0,101.0/255,1)
+# orange = RGB(1,154.0/255,0)
+# grad = cgrad([blue, :gray95, orange], [0.0, 0.5, 1.0])
+# p = heatmap(G.blocks[:, :, 2], aspect_ratio = 1, clims=(-0.5, 0.5), yflip = true, color = grad, title="G_21 (q = $(q), β = $(β), w = $(w))")
 
-G.blocks[1, 1, 2]
-G.blocks[1, L, 2]
+# G.blocks[1, 1, 2]
+# G.blocks[1, L, 2]
 
-syk = SYKData(N, J, q, 1, 2*β)
-G_init = Replicas.init(1, 2*L)
-Replicas.plot(G_init; title="$(r)")
-G, Σ = WeightedReplicas.schwinger_dyson(G_init, 0, syk; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-log_saddle = WeightedReplicas.log_saddle(G, Σ, 0, syk)
-Replicas.plot(G; title="β = $(β), w = $(w), saddle = $(log_saddle)")
+# syk = SYKData(N, J, q, 1, 2*β)
+# G_init = Replicas.init(1, 2*L)
+# Replicas.plot(G_init; title="$(r)")
+# G, Σ = WeightedReplicas.schwinger_dyson(G_init, 0, syk; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+# log_saddle = WeightedReplicas.log_saddle(G, Σ, 0, syk)
+# Replicas.plot(G; title="β = $(β), w = $(w), saddle = $(log_saddle)")

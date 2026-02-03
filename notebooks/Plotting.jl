@@ -20,7 +20,7 @@ legend_color = RGBA(1, 1, 1, 0.8)
 
 function plot_R2_weighted(β, qs, L, save_fig = false)
     mkpath("figures/weighted/R2/")
-    
+
     width = width_small
     height = height_small
     font = font_small
@@ -346,7 +346,7 @@ function plot_2R2_weighted(β, qs, L, save_fig=false)
                 label= L"q = %$(q)"
             )
         end
-       
+
         axislegend(position = :lb, rowgap = -5, padding = (6, 6, 0, 0), backgroundcolor = legend_color)
         display(f)
         save_fig && save("figures/weighted/R4/2R2/weighted_action_2R2_beta$(β)_L$(L).pdf", f)

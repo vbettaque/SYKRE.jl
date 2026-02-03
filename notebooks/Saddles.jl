@@ -12,8 +12,8 @@ using SYKRE.WeightedMatrix
 
 N = 1
 J = 1
-q = 2
-β = 50
+q = 4
+β = 1
 L = 1000
 w = 0.5
 
@@ -26,14 +26,14 @@ powervec(ss, n) = Iterators.product(ntuple(i->ss, n)...)
 # G_single_init = Replicas.init(1, R * L)
 # G_single, _ = WeightReplicas.schwinger_dyson(G_single_init, 0, SYKData(N, J, q, 1, R * β); init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
-G_init = Replicas.init(R, L)
+# G_init = Replicas.init(R, L)
 
 # for i = 1:R
 #     row_range = ((i-1) * L + 1):(i * L)
 #     @views G_init.blocks[:, :, i] = G_single.blocks[row_range, 1:L, 1]
 # end
 
-WeightedReplicas.plot_matrix(G_init; title="")
+# Replicas.plot(G_init; title="")
 
 
 for p in powervec([0, 1, -1], R÷2)
@@ -56,10 +56,10 @@ for p in powervec([0, 1, -1], R÷2)
             @views G_p.blocks[:, :, R-i+1] .*= p[i]
         end
     end
-    WeightReplicas.plot_matrix(G_p; title="$(p)")
-    G, Σ = WeightReplicas.schwinger_dyson(G_p, w, syk; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-    log2_saddle = WeightReplicas.log2_saddle(G, Σ, w, syk)
-    WeightReplicas.plot_matrix(G; title="log2_saddle = $(log2_saddle)")
+    Replicas.plot(G_p; title="$(p)")
+    G, Σ = WeightedReplicas.schwinger_dyson(G_p, w, syk; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+    log2_saddle = WeightedReplicas.log2_saddle(G, Σ, w, syk)
+    Replicas.plot(G; title="log2_saddle = $(log2_saddle)")
 end
 
 # G_init_1 = Replicas.init(1, 2*L)

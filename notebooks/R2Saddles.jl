@@ -24,10 +24,10 @@ function generate_R2_G_plot(β, w, q, L; init_lerp = 0.5, lerp_divisor = 2, tol=
     return scene, G
 end
 
-β = 20
-w = 0.01
+β = 1
+w = 0.00001
 q = 4
-L = 1800
+L = 1000
 
 f, G = generate_R2_G_plot(β, w, q, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
