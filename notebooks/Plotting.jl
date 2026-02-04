@@ -424,6 +424,7 @@ function plot_norm(qs, L, save_fig=false)
     height = height_large
     font = font_large
 
+    data_purity = []
     data_norm = []
     data_error = []
 
@@ -432,9 +433,14 @@ function plot_norm(qs, L, save_fig=false)
         df_norm = CSV.File("data/norm/norm_q$(q)_L$(L).csv") |> DataFrame
         push!(data_norm, df_norm)
 
-        df_purity_ordinary = CSV.File("data/purity/ordinary/purity_q$(q)_L$(L).csv") |> DataFrame
+        df_purity_ordinary = CSV.File("data/purity/ordinary_fourier/purity_q$(q)_L1000000.csv") |> DataFrame
+        push!(data_purity, df_purity_ordinary)
+
         df_purity_extremized = CSV.File("data/purity/extremized/purity_q$(q)_L$(L).csv") |> DataFrame
-        push!(data_error, abs.(df_purity_extremized[:, 2] - df_purity_ordinary[:, 2]) ./ 2)
+        action_ordinary = df_purity_ordinary[:, 2] - 2 * df_purity_ordinary[:, 3] .- log(2)/2
+        action_extremized = df_purity_extremized[:, 2] - 2 * df_purity_extremized[:, 4] .- log(2)/2
+        error_rel = abs.(action_ordinary - action_extremized) ./ abs.(action_extremized)
+        push!(data_error, error_rel)
     end
 
     with_theme(theme_latexfonts()) do
@@ -449,16 +455,15 @@ function plot_norm(qs, L, save_fig=false)
             errorbars!(
                 ax,
                 data_norm[i][:,1],
-                data_norm[i][:,2] .- log(2) / 2,
-                data_error[i][:],
-                data_error[i][:],
+                (data_norm[i][:,2] + data_norm[i][:,4] - data_purity[i][:,3])  .- log(2) / 2,
+                data_error[i][:] .* (data_norm[i][:,2] + data_norm[i][:,4]),
                 whiskerwidth = 3,
                 direction = :y
             )
             lines!(
                 ax,
                 data_norm[i][:,1],
-                data_norm[i][:,2] .- log(2) / 2,
+                (data_norm[i][:,2] + data_norm[i][:,4] - data_purity[i][:,3])  .- log(2) / 2,
                 color = Makie.wong_colors()[q ÷ 2],
                 label= L"q = %$(q)"
             )
@@ -483,7 +488,7 @@ function plot_purity(qs, L, save_fig=false)
 
     for i = eachindex(qs)
         q = qs[i]
-        df_ordinary = CSV.File("data/purity/ordinary/purity_q$(q)_L$(L).csv") |> DataFrame
+        df_ordinary = CSV.File("data/purity/ordinary_fourier/purity_q$(q)_L1000000.csv") |> DataFrame
         push!(data_ordinary, df_ordinary)
         df_extremized = CSV.File("data/purity/extremized/purity_q$(q)_L$(L).csv") |> DataFrame
         push!(data_extremized, df_extremized)
@@ -511,7 +516,7 @@ function plot_purity(qs, L, save_fig=false)
             lines!(
                 ax,
                 data_extremized[i][:,1],
-                data_extremized[i][:,2],
+                data_extremized[i][:,2] - 2 * data_extremized[i][:,4] + 2 * data_ordinary[i][:,3],
                 color = Makie.wong_colors()[q ÷ 2],
                 label= L"q = %$(q)",
                 linestyle = :dash,
@@ -525,7 +530,7 @@ function plot_purity(qs, L, save_fig=false)
             f[1,1],
             [group_ordinary, group_extremized],
             [[L"q = %$(q)" for q in qs], [L"q = %$(q)" for q in qs]],
-            [L"\ln(Z(2β)) / N", L"\max\left(H(w) - I^{(2, w)}_\mathrm{SYK}\right)"],
+            [L"\ln(Z(2β)) / N", L"\max\left(H(w) - I^{(2, w)}_\mathrm{SYK}(β)\right)"],
             nbanks = 2,
             tellheight = false,
             tellwidth = false,
@@ -561,10 +566,14 @@ function plot_norm_vs_purity(qs, L, save_fig=false)
         q = qs[i]
         df_norm = CSV.File("data/norm/norm_q$(q)_L$(L).csv") |> DataFrame
         push!(data_norm, df_norm)
-        df_purity_ordinary = CSV.File("data/purity/ordinary/purity_q$(q)_L$(L).csv") |> DataFrame
+        df_purity_ordinary = CSV.File("data/purity/ordinary_fourier/purity_q$(q)_L1000000.csv") |> DataFrame
         push!(data_purity_ordinary, df_purity_ordinary)
         df_purity_extremized = CSV.File("data/purity/extremized/purity_q$(q)_L$(L).csv") |> DataFrame
-        push!(data_error, abs.(df_purity_extremized[:, 2] - df_purity_ordinary[:, 2]) ./ 2)
+
+        action_ordinary = df_purity_ordinary[:, 2] - 2 * df_purity_ordinary[:, 3] .- log(2)/2
+        action_extremized = df_purity_extremized[:, 2] - 2 * df_purity_extremized[:, 4] .- log(2)/2
+        error_rel = abs.(action_ordinary - action_extremized) ./ abs.(action_extremized)
+        push!(data_error, error_rel)
     end
 
     with_theme(theme_latexfonts()) do
@@ -579,20 +588,17 @@ function plot_norm_vs_purity(qs, L, save_fig=false)
             errorbars!(
                 ax,
                 data_norm[i][:,1],
-                data_norm[i][:,2] .- log(2) / 2,
-                data_error[i][:],
-                data_error[i][:],
+                (data_norm[i][:,2] + data_norm[i][:,4] - data_purity_ordinary[i][:,3])  .- log(2) / 2,
+                data_error[i][:] .* (data_norm[i][:,2] + data_norm[i][:,4]),
                 whiskerwidth = 3,
                 direction = :y
             )
             lines!(
                 ax,
                 data_norm[i][:,1],
-                data_norm[i][:,2] .- log(2) / 2,
+                (data_norm[i][:,2] + data_norm[i][:,4] - data_purity_ordinary[i][:,3])  .- log(2) / 2,
                 color = Makie.wong_colors()[q ÷ 2],
-                # label= L"\ln(F_1(\rho)) / N - \ln(2)/2 \quad (q = %$(q))",
-                label= L"\ln\left(\tilde{F}_1(\rho)\right) / N \quad (q = %$(q))",
-
+                 label= L"\ln\left(\tilde{F}_1(\rho)\right) / N \quad (q = %$(q))",
             )
             lines!(
                 ax,
@@ -644,11 +650,11 @@ end
 #     plot_R4_weighted_single_q(β, 4, 1000, true, true, false, true)
 # end
 
-plot_2R2_weighted(0.1, [2, 4], 1000, true)
-plot_2R2_weighted(0.2, [2, 4], 1000, true)
-for β in [0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
-    plot_2R2_weighted(β, [2, 4, 6, 8], 1000, true)
-end
+# plot_2R2_weighted(0.1, [2, 4], 1000, true)
+# plot_2R2_weighted(0.2, [2, 4], 1000, true)
+# for β in [0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
+#     plot_2R2_weighted(β, [2, 4, 6, 8], 1000, true)
+# end
 
 
 
@@ -665,4 +671,4 @@ end
 
 # plot_norm([2, 4, 6, 8], 1000, true)
 # plot_purity([2, 4, 6, 8], 1000, true)
-# plot_norm_vs_purity([2, 4], L, true)
+plot_norm_vs_purity([2, 4], L, true)
