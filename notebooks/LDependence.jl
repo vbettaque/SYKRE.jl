@@ -99,7 +99,7 @@ function generate_jump_dependence(Ls, q, β, w; init_lerp = 0.5, lerp_divisor = 
 end
 
 Ls = 100:100:2000
-generate_jump_dependence(Ls, 4, 10, 0.0; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+generate_jump_dependence(Ls, 2, 20, 0.01; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 # generate_1R1_det_plus_dependence(Ls, 2, 1; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 # generate_1R2_det_plus_dependence(Ls, 4, 20; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
