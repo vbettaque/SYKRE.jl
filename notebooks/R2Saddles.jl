@@ -27,11 +27,14 @@ end
 β = 1
 w = 0.00001
 q = 4
-L = 1000
+L = 2000
 
-f, G = generate_R2_G_plot(β, w, q, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-
-# CSV.write("data/G_saddles/R2/G12_beta$(β)_w$(w)_q$(q)_L$(L).csv", Tables.table(G.blocks[:, :, 2]), writeheader=false)
-
-# save("figures/G_saddles/R2/G_R2_beta$(β)_w$(w)_q$(q)_L$(L).pdf", f)
-f
+for β in [5, 20, 50]
+    for w in [0.01, 0.5, 1.0]
+        f, G = generate_R2_G_plot(β, w, q, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+        if β == 20 && w == 0.5
+            CSV.write("data/G_saddles/R2/G12_beta$(β)_w$(w)_q$(q)_L$(L).csv", Tables.table(G.blocks[:, :, 2]), writeheader=false)
+        end
+        save("figures/G_saddles/R2/G_R2_beta$(β)_w$(w)_q$(q)_L$(L).pdf", f)
+    end
+end
