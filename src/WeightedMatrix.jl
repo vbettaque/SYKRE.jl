@@ -48,8 +48,8 @@ function propagtors(Σ, syk::SYKData)
     D_minus = differential(L; M = M, periodic = false)
     D_plus = differential(L; M = M, periodic = true)
 
-    prop_minus = D_minus - 2 * Δτ^2 * Σ
-	prop_plus = D_plus - 2 * Δτ^2 * Σ
+    prop_minus = D_minus - Δτ^2 * Σ
+	prop_plus = D_plus - Δτ^2 * Σ
 
     return prop_minus, prop_plus
 end
@@ -64,11 +64,11 @@ end
 function G_SD(Σ, w, syk::SYKData)
     prop_minus, prop_plus = propagtors(Σ, syk)
     G = if iszero(w)
-        -2 * inv(prop_minus)'
+        -inv(prop_minus)'
     elseif isone(w)
-        -2 * inv(prop_plus)'
+        -inv(prop_plus)'
     else
-        -2 * (w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
+        -(w * inv(prop_plus) + (1 - w) * inv(prop_minus))'
     end
     # G -= Diagonal(G)
     return G
@@ -85,7 +85,7 @@ function schwinger_dyson(G_init, w, syk::SYKData; init_lerp = 0.5, lerp_divisor 
     @assert iseven(syk.q)
     @assert 0 ≤ w ≤ 1
 
-    plot_matrix(G_init; title="G_init")
+    # plot_matrix(G_init; title="G_init")
 
 	t = init_lerp
 
@@ -93,7 +93,7 @@ function schwinger_dyson(G_init, w, syk::SYKData; init_lerp = 0.5, lerp_divisor 
 	Σ = Σ_SD(G, syk)
 
     i = 1
-    println("Iteration ", i)
+    @info "Iteration $(i)"
     G_new = G_SD(Σ, w, syk)
 
     err = sum(abs.(G_new - G)) / sum(abs.(G))
@@ -105,12 +105,12 @@ function schwinger_dyson(G_init, w, syk::SYKData; init_lerp = 0.5, lerp_divisor 
 		if isapprox(err_new, 0; atol=1e-5)
             G = G_lerp
             Σ = Σ_SD(G, syk)
-            println("Converged after ", i, " iterations")
+            @info "Converged after $(i) iterations"
             break
         end
 
 		if (err_new > err)
-            println("Relative error increased, trying again...")
+            @info "Relative error increased, trying again..."
             t /= lerp_divisor
             continue
         end
@@ -124,11 +124,11 @@ function schwinger_dyson(G_init, w, syk::SYKData; init_lerp = 0.5, lerp_divisor 
         i += 1
 
         if i > max_iters
-            println("Exceeded iterations!")
+            @warn "Exceeded iterations!"
             break
         end
 
-        println("Iteration ", i)
+        @info "Iteration $(i)"
         G_new = G_SD(Σ, w, syk)
 	end
 
