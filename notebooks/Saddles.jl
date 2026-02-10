@@ -1,5 +1,4 @@
 using CSV, DataFrames, Statistics, Plots, LinearAlgebra, FFTW, Latexify, BlockArrays, Combinatorics, CairoMakie
-
 using SYKRE
 using SYKRE.SYK
 using SYKRE.SYKMatrix
@@ -89,6 +88,10 @@ blue = RGB(0,101.0/255,1)
 orange = RGB(1,154.0/255,0)
 grad = cgrad([blue, :gray95, orange], [0.0, 0.5, 1.0])
 
+width_ = 512
+height_ = 512
+
+
 N = 1
 J = 1
 q = 4
@@ -103,26 +106,26 @@ syk = SYKData(N, J, q, R, β)
 
 # Permutation 1
 
-G_init = inv(WeightedMatrix.differential(R * L; M = 1, periodic=false)) - I/2
-G_init = BlockedArray(G_init, repeat([L], R), repeat([L], R))
+# G_init = inv(WeightedMatrix.differential(R * L; M = 1, periodic=false)) - I/2
+# G_init = BlockedArray(G_init, repeat([L], R), repeat([L], R))
 
-G_init[Block(1, 2)] .= 0
-G_init[Block(2, 1)] .= 0
+# G_init[Block(1, 2)] .= 0
+# G_init[Block(2, 1)] .= 0
 
-G_init[Block(1, 4)] .= 0
-G_init[Block(4, 1)] .= 0
+# G_init[Block(1, 4)] .= 0
+# G_init[Block(4, 1)] .= 0
 
-G_init[Block(2, 3)] .= 0
-G_init[Block(3, 2)] .= 0
+# G_init[Block(2, 3)] .= 0
+# G_init[Block(3, 2)] .= 0
 
-G_init[Block(3, 4)] .= 0
-G_init[Block(4, 3)] .= 0
+# G_init[Block(3, 4)] .= 0
+# G_init[Block(4, 3)] .= 0
 
-G, Σ = WeightedMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.01, lerp_divisor = 2, max_iters=1000)
+# G, Σ = WeightedMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.01, lerp_divisor = 2, max_iters=1000)
 
-scene = Scene(camera=campixel!, size = (width, height))
-image!(scene, 0..width, 0..height, rotr90(G), colormap = grad)
-save("figures/permutations/perm1_2R2_beta$(β)_w$(w)_q$(q)_L$(L).pdf", f)
+# scene = Scene(camera=campixel!, size = (width_, height_))
+# image!(scene, 0..width_, 0...height_, rotr90(G), colormap = grad)
+# save("figures/permutations/perm1_2R2_beta$(β)_w$(w)_q$(q)_L$(L).pdf", scene)
 
 # Permutation 2
 
@@ -143,9 +146,9 @@ G_init[Block(4, 2)] .= 0
 
 G, Σ = WeightedMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.01, lerp_divisor = 2, max_iters=1000)
 
-scene = Scene(camera=campixel!, size = (width, height))
-image!(scene, 0..width, 0..height, rotr90(G), colormap = grad)
-save("figures/permutations/perm2_2R2_beta$(β)_w$(w)_q$(q)_L$(L).pdf", f)
+scene = Scene(camera=campixel!, size = (width_, height_))
+image!(scene, 0..width_, 0..height_, rotr90(G), colormap = grad)
+save("figures/permutations/perm2_2R2_beta$(β)_w$(w)_q$(q)_L$(L).pdf", scene)
 
 # Permutation 3
 
@@ -166,6 +169,6 @@ G_init[Block(4, 3)] .= 0
 
 G, Σ = WeightedMatrix.schwinger_dyson(G_init, w, syk; init_lerp = 0.01, lerp_divisor = 2, max_iters=1000)
 
-scene = Scene(camera=campixel!, size = (width, height))
-image!(scene, 0..width, 0..height, rotr90(G), colormap = grad)
-save("figures/permutations/perm3_2R2_beta$(β)_w$(w)_q$(q)_L$(L).pdf", f)
+scene = Scene(camera=campixel!, size = (width_, height_))
+image!(scene, 0..width_, 0..height_, rotr90(G), colormap = grad)
+save("figures/permutations/perm3_2R2_beta$(β)_w$(w)_q$(q)_L$(L).pdf", scene)

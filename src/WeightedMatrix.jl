@@ -132,7 +132,7 @@ function schwinger_dyson(G_init, w, syk::SYKData; init_lerp = 0.5, lerp_divisor 
         G_new = G_SD(Σ, w, syk)
 	end
 
-    plot_matrix(G; title="w = $(w), β = $(syk.β)")
+    # plot_matrix(G; title="w = $(w), β = $(syk.β)")
 
 	return G, Σ
 end
