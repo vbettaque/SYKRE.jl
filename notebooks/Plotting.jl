@@ -7,7 +7,7 @@ cm = inch / 2.54
 
 invphi = (sqrt(5) - 1) / 2
 
-width_large = 6.5inch
+width_large = 0.8 * 6.5inch
 height_large = invphi * width_large
 
 width_small = 3.25inch
@@ -29,7 +29,7 @@ function plot_R2_weighted(β, qs, L, save_fig = false)
     Z_data = []
     for q in qs
         weighted_df = CSV.File("data/weighted/1R2/weighted_1R2_beta$(β)_q$(q)_L$(L).csv") |> DataFrame
-        Z_df = CSV.File("data/partition_function/partition_function_q$(q)_L$(L).csv") |> DataFrame
+        Z_df = CSV.File("data/partition_function/matrix/partition_function_q$(q)_L$(L).csv") |> DataFrame
         Z_df = Z_df[Z_df.beta .== β, :][1, :]
         weighted_df[1, 2] = 2 * Z_df[2]
         weighted_df[1, 3] = Z_df[3]^2
@@ -42,7 +42,7 @@ function plot_R2_weighted(β, qs, L, save_fig = false)
     # -I(w)
 
     with_theme(theme_latexfonts()) do
-        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
+        f = Figure(size = (width, height), figure_padding = (2, 1, 1, 1), fontsize = font)
         ax = Axis(f[1, 1],
             # title = "Experimental data and exponential fit",
             xlabel = L"$w$",
@@ -65,7 +65,7 @@ function plot_R2_weighted(β, qs, L, save_fig = false)
     # -I(w) + H(w)
 
     with_theme(theme_latexfonts()) do
-        f = Figure(size = (width, height), figure_padding = (1, 1, 1, 1), fontsize = font)
+        f = Figure(size = (width, height), figure_padding = (2, 1, 1, 1), fontsize = font)
         ax = Axis(f[1, 1],
             # title = "Experimental data and exponential fit",
             xlabel = L"$w$",
@@ -307,7 +307,7 @@ function plot_2R2_weighted(β, qs, L, save_fig=false)
 
     for i = eachindex(qs)
         q = qs[i]
-        data_Z_q = CSV.File("data/partition_function/partition_function_q$(q)_L$(L).csv") |> DataFrame
+        data_Z_q = CSV.File("data/partition_function/matrix/partition_function_q$(q)_L$(L).csv") |> DataFrame
         data_Z_q = data_Z_q[data_Z_q.beta .== β, :][1, :]
         push!(data_Z, data_Z_q)
 
@@ -448,7 +448,7 @@ function plot_norm(qs, L, save_fig=false)
         ax = Axis(f[1, 1],
             # title = L"\beta = %$(β), q = %$(q)",
             xlabel = L"β",
-            ylabel = L"\ln\left(F_1(\rho)\right) / N - \ln(2)/2",
+            ylabel = L"\ln\left(\overline{F_1(\rho)}\right) / N - \ln(2)/2",
         )
         for i in eachindex(qs)
             q = qs[i]
@@ -469,7 +469,7 @@ function plot_norm(qs, L, save_fig=false)
             )
         end
 
-        axislegend(position = :rb, rowgap = 0, padding = (7, 7, 2, 2), margin = (10, 10, 10, 10))
+        axislegend(position = :rb, rowgap = 0, padding = (7, 7, 2, 2), margin = (10, 10, 10, 10),  backgroundcolor = RGBA(1, 1, 1, 0.9))
         display(f)
         save_fig && save("figures/norm_purity/norm_L$(L).pdf", f)
     end
@@ -499,7 +499,7 @@ function plot_purity(qs, L, save_fig=false)
         ax = Axis(f[1, 1],
             # title = L"\beta = %$(β), q = %$(q)",
             xlabel = L"β",
-            ylabel = L"S_2(\rho) / N",
+            ylabel = L"\overline{S_2(\rho)} / N",
         )
         for i in eachindex(qs)
             q = qs[i]
@@ -530,16 +530,18 @@ function plot_purity(qs, L, save_fig=false)
             f[1,1],
             [group_ordinary, group_extremized],
             [[L"q = %$(q)" for q in qs], [L"q = %$(q)" for q in qs]],
-            [L"\ln(Z(2β)) / N", L"\max\left(H(w) - I^{(2, w)}_\mathrm{SYK}(β)\right)"],
+            [L"\ln(\overline{Z(2β)}) / N", L"\max_{w\in[0, 1]}\left(H(w) - I^{(2, w)}_\mathrm{SYK}(β)\right)"],
             nbanks = 2,
             tellheight = false,
             tellwidth = false,
             halign = :left,
             valign = :bottom,
             margin = (10, 10, 10, 10),
+            padding = (2, 2, 2, 4),
             fontsize = font,
-            titlegap = 0,
-            groupgap = 10,
+            titlegap = -2,
+            groupgap = 5,
+            rowgap = 0,
             backgroundcolor = RGBA(1, 1, 1, 0.9)
         )
 
@@ -617,16 +619,19 @@ function plot_norm_vs_purity(qs, L, save_fig=false)
             f[1,1],
             [group_norm, group_purity],
             [[L"q = %$(q)" for q in qs], [L"q = %$(q)" for q in qs]],
-            [L"\ln(F_1(\rho)) / N - \ln(2)/2", L"\ln(2) / 4 - S_2(\rho) / 2N"],
+            [L"\ln(\overline{F_1(\rho)}) / N - \ln(2)/2", L"\ln(2) / 4 - \overline{S_2(\rho)} / 2N"],
             nbanks = length(qs),
             tellheight = false,
             tellwidth = false,
             halign = :right,
             valign = :bottom,
             margin = (10, 10, 10, 10),
+            padding = (4, 4, 2, 4),
             fontsize = font,
-            titlegap = 0,
-            groupgap = 10,
+            titlegap = -2,
+            groupgap = 5,
+            rowgap = 0,
+            backgroundcolor = RGBA(1, 1, 1, 0.9)
         )
 
         # axislegend(position = :rb, rowgap = 0, padding = (7, 7, 2, 2))
@@ -671,4 +676,4 @@ end
 
 # plot_norm([2, 4, 6, 8], 1000, true)
 # plot_purity([2, 4, 6, 8], 1000, true)
-plot_norm_vs_purity([2, 4], L, true)
+plot_norm_vs_purity([2, 4], 1000, true)

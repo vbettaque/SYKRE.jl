@@ -54,10 +54,19 @@ end
 #     end
 # end
 
-β = 2
-w = 0.5
+β = 20
+w = 0.25
 q = 4
-L = 1000
+L = 2000
 
-f, G = generate_1R4_G_plot(β, w, q, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
-display(f)
+f, G = generate_R2_G_plot(β, w, q, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+CSV.write("data/G_saddles/R2/G12_beta$(β)_w$(w)_q$(q)_L$(L).csv", Tables.table(G.blocks[:, :, 2]), writeheader=false)
+
+
+# β = 2
+# w = 0.5
+# q = 4
+# L = 1000
+
+# f, G = generate_1R4_G_plot(β, w, q, L; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+# display(f)
