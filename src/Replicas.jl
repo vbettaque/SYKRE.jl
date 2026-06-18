@@ -20,7 +20,7 @@ function plot(A::ReplicaMatrix; title="")
     blue = RGB(0,101.0/255,1)
     orange = RGB(1,154.0/255,0)
     grad = cgrad([blue, :gray95, orange], [0.0, 0.5, 1.0])
-    p = heatmap(A_M, aspect_ratio = 1, clims=(-0.5, 0.5), yflip = true, color = grad, title=title)
+    p = heatmap(A_M, aspect_ratio = 1, yflip = true, color = grad, title=title)
 
     display(p)
 end
