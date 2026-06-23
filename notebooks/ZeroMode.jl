@@ -54,17 +54,49 @@ function generate_zero_mode_data(ws, L, β, q; init_lerp = 0.5, lerp_divisor = 2
 
 end
 
-β = 20
-q = 2
-L = 1000
-ws = 0:0.02:1
+# β = 20
+# q = 2
+# L = 1000
+# ws = 0:0.02:1
 
-generate_zero_mode_data(ws, L, β, q; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
+# generate_zero_mode_data(ws, L, β, q; init_lerp = 0.01, lerp_divisor = 2, tol=1e-5, max_iters=1000)
 
 
 
-# fit_model(w, p) = (w ./ (p[1]^2)).^(1 / 4)
-# p0 = [5.]
+fit_model(w, p) = (w ./ (p[1]^2)).^(1 / 4)
+p0 = [5.]
+
+
+# Sigma_0 plot
+
+data05 = CSV.File("data/zero_mode/zero_mode_beta0.5_q4_L1000.csv") |> DataFrame
+data5 = CSV.File("data/zero_mode/zero_mode_beta5_q4_L1000.csv") |> DataFrame
+data10 = CSV.File("data/zero_mode/zero_mode_beta10_q4_L1000.csv") |> DataFrame
+data20 = CSV.File("data/zero_mode/zero_mode_beta10_q4_L1000.csv") |> DataFrame
+
+f = Figure(size = (400, 300))
+ax = Axis(f[1, 1], xlabel = L"w")
+
+lines!(ax, data20[:, 1], data20[:, 3], label = L"Σ^{(0)}")
+lines!(ax, data20[:, 1], data20[:, 2].^(3), label = L"J^2 (G^{(0)})^{3}")
+axislegend(position = :lt)
+xaxis!(L"w")
+save("figures/zero_mode/zero_mode_beta20_q4_L1000.pdf", f)
+f
+
+f = Figure(size = (400, 300))
+ax = Axis(f[1, 1], xlabel = L"w", ylabel = L"[Σ^{(0)} - J^2 (G^{(0)})^3] / [J^2 (G^{(0)})^3)]")
+lines!(ax, data05[:, 1], (data05[:, 3] .- data05[:, 2].^(3)) ./ data05[:, 2].^(3), label = L"β = 0.5")
+lines!(ax, data5[:, 1], (data5[:, 3] .- data5[:, 2].^(3)) ./ data5[:, 2].^(3), label = L"β = 5")
+lines!(ax, data10[:, 1], (data10[:, 3] .- data10[:, 2].^(3)) ./ data10[:, 2].^(3), label = L"β = 10")
+lines!(ax, data20[:, 1], (data20[:, 3] .- data20[:, 2].^(3)) ./ data20[:, 2].^(3), label = L"β = 20")
+
+axislegend(position = :rt)
+xaxis!(L"w")
+save("figures/zero_mode/zero_mode_relative_q4_L1000.pdf", f)
+f
+
+# G_0 plot
 
 # data = CSV.File("data/zero_mode/zero_mode_beta20_q4_L1000.csv") |> DataFrame
 
